@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -59,7 +60,8 @@ public class PlayerMovement : MonoBehaviour
         }
         verticalVelocity.y += gravity * Time.deltaTime;
 
-        if (!InventoryUICode.IsOpen)
+        // Вращение камеры только если курсор НЕ над UI
+        if (!EventSystem.current.IsPointerOverGameObject())
         {
             if (Input.GetMouseButtonDown(1))
             {
@@ -67,21 +69,25 @@ public class PlayerMovement : MonoBehaviour
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             }
-            else if (Input.GetMouseButtonUp(1))
+        }
+
+        if (isRotatingCamera)
+        {
+            // Прерываем вращение, если отпустили ПКМ или курсор наехал на UI
+            if (Input.GetMouseButtonUp(1) || EventSystem.current.IsPointerOverGameObject())
             {
                 isRotatingCamera = false;
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
-        }
-        else
-        {
-            // Инвентарь открыт — сбрасываем вращение камеры
-            if (isRotatingCamera)
+            else
             {
-                isRotatingCamera = false;
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+                float mouseY = Input.GetAxis("Mouse Y") * verticalSensitivity;
+                transform.Rotate(0, mouseX, 0);
+                verticalRotation -= mouseY;
+                verticalRotation = Mathf.Clamp(verticalRotation, -maxVerticalAngle, maxVerticalAngle);
+                playerCamera.transform.localEulerAngles = new Vector3(verticalRotation, 0, 0);
             }
         }
 

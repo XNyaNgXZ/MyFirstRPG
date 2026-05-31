@@ -5,6 +5,7 @@ using UnityEngine.EventSystems;
 public class InventoryUICode : MonoBehaviour
 {
     public static bool IsOpen = false;
+    public static InventoryUICode Instance { get; private set; }
 
     [Header("Drop Sound")]
     public AudioClip dropSound;
@@ -25,6 +26,7 @@ public class InventoryUICode : MonoBehaviour
     void Start()
     {
         inventory = GetComponent<Inventory>();
+        Instance = this;
         if (inventory == null)
         {
             Debug.LogError("InventoryUICode: на Player нет компонента Inventory!");
@@ -355,5 +357,12 @@ public class InventoryUICode : MonoBehaviour
     void HideTooltip()
     {
         if (tooltip != null) tooltip.SetActive(false);
+    }
+    public static void RefreshIfOpen()
+    {
+        if (IsOpen && Instance != null)
+        {
+            Instance.RefreshInventoryUI();
+        }
     }
 }

@@ -49,6 +49,7 @@ public class MouseInteractor : MonoBehaviour
                     {
                         Item newItem = new Item(itemData.itemName, itemData.itemType, itemData.value);
                         inventory.AddItem(newItem);
+                        InventoryUICode.RefreshIfOpen();
 
                         if (pickupSound != null)
                         {
