@@ -3,15 +3,18 @@ using UnityEngine.SceneManagement;
 
 public class PlayerHealth : MonoBehaviour
 {
+    private Inventory inventory;
+
     [Header("Sound")]
     public AudioClip hurtSound;
     public float hurtVolume = 0.5f;
 
     private bool isDead = false;
-    public int maxHealth = 10;
+    public int maxHealth = 100;
     public int currentHealth;
     void Start()
     {
+        inventory = GetComponent<Inventory>();
         currentHealth = maxHealth;
         Debug.Log($"Здоровье: {currentHealth}/{maxHealth}");
     }
@@ -30,9 +33,13 @@ public class PlayerHealth : MonoBehaviour
         {
             return;
         }
-        
-        currentHealth -= damage;
-        
+
+        int defense = (inventory != null) ? inventory.GetTotalDefense() : 0;
+        int finalDamage = damage - defense;
+        if (finalDamage < 0) finalDamage = 0;
+        currentHealth -= finalDamage;
+        Debug.Log($"Получено {finalDamage} урона (защита {defense})");
+
         if (hurtSound != null)
         {
             AudioSource.PlayClipAtPoint(hurtSound, transform.position, hurtVolume);

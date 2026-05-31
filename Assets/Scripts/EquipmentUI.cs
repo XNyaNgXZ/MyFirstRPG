@@ -1,15 +1,22 @@
-using UnityEngine;
-using UnityEngine.UI;
-using UnityEngine.EventSystems;
 using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 public class EquipmentUI : MonoBehaviour
 {
+    private GameObject tooltip;
+    private Text tooltipText;
+    private RectTransform tooltipRect;
     public static bool IsOpen { get; private set; } = false;
     private GameObject equipmentCanvas;
     private GameObject equipmentPanel;
     private Transform slotsContainer;
     private Inventory inventory;
+
+    private Dictionary<string, GameObject> slotObjects = new Dictionary<string, GameObject>();
+    private Dictionary<string, Item> currentEquipment; // будем брать из inventory
 
     private struct SlotDef
     {
@@ -142,7 +149,28 @@ public class EquipmentUI : MonoBehaviour
         for (int i = 0; i < slots.Length; i++)
         {
             CreateSlot(i, slots[i]);
-        }   
+        }
+
+        // Тултип
+        tooltip = new GameObject("Tooltip");
+        tooltip.transform.SetParent(equipmentCanvas.transform, false);
+        tooltipRect = tooltip.AddComponent<RectTransform>();
+        tooltipRect.sizeDelta = new Vector2(180, 60);
+        tooltipRect.pivot = new Vector2(0, 1);
+        tooltip.AddComponent<Image>().color = new Color(0.07f, 0.07f, 0.1f, 1f);
+
+        GameObject ttTextGO = new GameObject("TooltipText");
+        ttTextGO.transform.SetParent(tooltip.transform, false);
+        RectTransform ttRect = ttTextGO.AddComponent<RectTransform>();
+        ttRect.anchorMin = Vector2.zero; ttRect.anchorMax = Vector2.one;
+        ttRect.offsetMin = new Vector2(8, 6); ttRect.offsetMax = new Vector2(-8, -6);
+        tooltipText = ttTextGO.AddComponent<Text>();
+        tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tooltipText.color = Color.white;
+        tooltipText.fontSize = 12;
+        tooltipText.supportRichText = true;
+        tooltipText.alignment = TextAnchor.UpperLeft;
+        tooltip.SetActive(false);
     }
     void CreateSlot(int idx, SlotDef slotDef)
     {
@@ -152,6 +180,7 @@ public class EquipmentUI : MonoBehaviour
 
         GameObject slotGO = new GameObject($"Slot_{slotDef.name}");
         slotGO.transform.SetParent(slotsContainer, false);
+        slotObjects[slotDef.allowedType] = slotGO;
 
         //Фон Слота
         Image bgImage = slotGO.AddComponent<Image>();
@@ -198,11 +227,25 @@ public class EquipmentUI : MonoBehaviour
         EventTrigger et = slotGO.AddComponent<EventTrigger>();
 
         var onEnter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-        onEnter.callback.AddListener((_) => bgImage.color = highlightColor);
+        onEnter.callback.AddListener((_) => {
+            bgImage.color = highlightColor;
+            // Показываем тултип
+            Item equipped = inventory?.GetEquippedItem(slotDef.allowedType);
+            if (tooltip != null)
+            {
+                tooltipText.text = equipped != null
+                    ? $"<b>{equipped.itemName}</b>\nЗащита: {equipped.value}\nЛКМ — снять"
+                    : $"<b>{slotDef.name}</b>\n<color=#666666>Пусто</color>";
+                tooltip.SetActive(true);
+            }
+        });
         et.triggers.Add(onEnter);
 
         var onExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        onExit.callback.AddListener((_) => bgImage.color = normalColor);
+        onExit.callback.AddListener((_) => {
+            bgImage.color = normalColor;
+            if (tooltip != null) tooltip.SetActive(false);
+        });
         et.triggers.Add(onExit);
 
         ColorBlock cb = btn.colors;
@@ -211,11 +254,21 @@ public class EquipmentUI : MonoBehaviour
         cb.pressedColor = new Color(0.15f, 0.15f, 0.18f);
         btn.colors = cb;
 
-        // пока просто вывод на консоль, ПОТОМ СДЕЛАТЬ СНЯТИЕ ПРЕДМЕТА УЖЕ
         btn.onClick.AddListener(() =>
         {
-            Debug.Log($"Клик по слоту: {slotDef.name}");
-            StartCoroutine(FlashSlot(bgImage, pressColor, normalColor));
+            if (inventory != null)
+            {
+                Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
+                if (equipped != null)
+                {
+                    inventory.UnequipItem(slotDef.allowedType);
+                    RefreshEquipmentUI();
+                }
+                else
+                {
+                    Debug.Log($"Слот {slotDef.name} пуст");
+                }
+            }
         });
 
     }
@@ -227,18 +280,129 @@ public class EquipmentUI : MonoBehaviour
         img.color = normal;
     }
 
+    public static EquipmentUI Instance { get; private set; }
+    private void Awake()
+    {
+        Instance = this;
+    }
+    public static void RefreshIfOpen()
+    {
+        if (IsOpen && Instance != null)
+        {
+            Instance.RefreshEquipmentUI();
+        }
+    }
+
+    void RefreshEquipmentUI()
+    {
+        if (inventory == null) inventory = GetComponent<Inventory>();
+        if (inventory == null) return;
+
+        var equipped = inventory.equippedItems;
+        foreach (var kvp in slotObjects)
+        {
+            string slotType = kvp.Key;
+            GameObject slot = kvp.Value;
+            Item item = equipped.ContainsKey(slotType) ? equipped[slotType] : null;
+
+            Image bg = slot.GetComponent<Image>();
+            bg.color = item != null ? new Color(0.28f, 0.28f, 0.33f) : new Color(0.20f, 0.20f, 0.24f);
+
+            Transform iconTransform = slot.transform.Find("Icon");
+            if (iconTransform == null)
+            {
+                GameObject iconGO = new GameObject("Icon");
+                iconGO.transform.SetParent(slot.transform, false);
+                RectTransform iconRect = iconGO.AddComponent<RectTransform>();
+                iconRect.anchorMin = new Vector2(0.1f, 0.1f);
+                iconRect.anchorMax = new Vector2(0.9f, 0.9f);
+                iconRect.offsetMin = Vector2.zero;
+                iconRect.offsetMax = Vector2.zero;
+                Image iconImg = iconGO.AddComponent<Image>();
+                iconTransform = iconGO.transform;
+            }
+
+            Image iconImage = iconTransform.GetComponent<Image>();
+            Text letterText = iconTransform.Find("Letter")?.GetComponent<Text>();
+            if (iconImage != null)
+            {
+                if (item != null)
+                {
+                    // --- Цвет в зависимости от типа ---
+                    Color equipColor;
+                    switch (item.itemType)
+                    {
+                        case "Weapon":
+                        case "Shield":
+                            equipColor = new Color(0.82f, 0.22f, 0.22f);
+                            break;
+                        case "Helmet":
+                        case "Chest":
+                        case "Legs":
+                        case "Boots":
+                            equipColor = new Color(0.22f, 0.48f, 0.85f);
+                            break;
+                        case "Ring":
+                        case "Amulet":
+                            equipColor = new Color(75f / 255f, 0f, 130f / 255f);
+                            break;
+                        default:
+                            equipColor = Color.white;
+                            break;
+                    }
+                    iconImage.color = equipColor;
+
+                    if (letterText != null)
+                    {
+                        letterText.text = item.itemName.Length > 0 ? item.itemName[0].ToString() : "?";
+                        letterText.gameObject.SetActive(true);
+                    }
+                }
+                else
+                {
+                    iconImage.color = new Color(0.2f, 0.2f, 0.24f, 0.5f);
+                    if (letterText != null) letterText.gameObject.SetActive(false);
+                }
+            }
+        }
+    }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.I))
+        // EquipmentUI Update():
+        if (Input.GetKeyDown(KeyCode.Tab))
         {
             IsOpen = !IsOpen;
             equipmentPanel.SetActive(IsOpen);
+
             if (IsOpen)
             {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                RefreshEquipmentUI();
+                PlayerMovement.UnlockCursor();
             }
+            else
+            {
+                PlayerMovement.LockCursor();
+            }
+        }
+
+        if (tooltip != null && tooltip.activeSelf)
+        {
+            Vector2 mp = Input.mousePosition;
+            float ox = 15f, oy = -15f;
+            if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width) ox = -tooltipRect.sizeDelta.x - 5f;
+            if (mp.y + oy - tooltipRect.sizeDelta.y < 0) oy = tooltipRect.sizeDelta.y + 5f;
+            tooltipRect.position = new Vector3(mp.x + ox, mp.y + oy, 0);
+        }
+    }
+    public void SetOpen(bool open)
+    {
+        if (equipmentPanel == null) return;
+        IsOpen = open;
+        equipmentPanel.SetActive(open);
+        if (open)
+        {
+            RefreshEquipmentUI(); // при открытии обновляем содержимое
         }
     }
 }

@@ -19,13 +19,13 @@ public class EnemyNav : MonoBehaviour
     private float timeSinceLastSeen = 0f;
 
     [Header("Stats")]
-    public int maxHealth = 5;
+    public int maxHealth = 50;
     private int currentHealth;
 
     [Header("Attack")]
     public float attackRange = 2f;
-    public int attackDamage = 2;
-    public float attackCooldown = 1.5f;
+    public int attackDamage = 15;
+    public float attackCooldown = 3.5f;
     private float lastAttackTime;
 
     [Header("Movement")]

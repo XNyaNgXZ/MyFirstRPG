@@ -30,6 +30,6 @@ public class PotionCounter : MonoBehaviour
         int count = 0;
         foreach (Item item in inventory.items)
             if (item.itemType == "Potion") count++;
-        counterText.text = $"Зелий: {count}";
+        counterText.text = $"Potions: {count}";
     }
 }

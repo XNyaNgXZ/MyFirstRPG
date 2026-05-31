@@ -158,14 +158,12 @@ public class InventoryUICode : MonoBehaviour
             if (IsOpen)
             {
                 RefreshInventoryUI();
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                PlayerMovement.UnlockCursor();
             }
             else
             {
                 HideTooltip();
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
+                PlayerMovement.LockCursor();
             }
         }
 
@@ -215,10 +213,16 @@ public class InventoryUICode : MonoBehaviour
             Image iconImg = iconGO.AddComponent<Image>();
             iconImg.color = item.itemType switch
             {
-                "Potion" => new Color(0.15f, 0.72f, 0.33f, 1f),
-                "Weapon" => new Color(0.82f, 0.22f, 0.22f, 1f),
-                "Armour" => new Color(0.22f, 0.48f, 0.85f, 1f),
-                _ => new Color(0.75f, 0.65f, 0.18f, 1f),
+                "Potion" => new Color(0.15f, 0.72f, 0.33f, 1f), // зелёный
+                "Weapon" => new Color(0.82f, 0.22f, 0.22f, 1f), // красный
+                "Helmet" => new Color(0.22f, 0.48f, 0.85f, 1f), // синий
+                "Chest" => new Color(0.22f, 0.48f, 0.85f, 1f),
+                "Legs" => new Color(0.22f, 0.48f, 0.85f, 1f),
+                "Boots" => new Color(0.22f, 0.48f, 0.85f, 1f),
+                "Shield" => new Color(0.82f, 0.22f, 0.22f, 1f),
+                "Ring" => new Color(75f / 255f, 0f, 130f / 255f, 1f), // фиолетовый
+                "Amulet" => new Color(75f / 255f, 0f, 130f / 255f, 1f),
+                _ => new Color(0.75f, 0.65f, 0.18f, 1f)  // жёлтый для неизвестных
             };
 
             GameObject letterGO = new GameObject("Letter");
@@ -260,10 +264,10 @@ public class InventoryUICode : MonoBehaviour
                         inventory.UseItem(capturedIndex);
                         RefreshInventoryUI();
                     }
-                    else if (item.itemType == "Weapon")
+                    else if (inventory.IsEquippableType(item.itemType))
                     {
-                        inventory.EquipWeapon(item);
-                        RefreshInventoryUI(); // Обновим инвентарь, то есть оружие исчезнет из списка
+                        inventory.EquipItem(item);
+                        RefreshInventoryUI();
                     }
                     else
                     {
@@ -320,8 +324,14 @@ public class InventoryUICode : MonoBehaviour
             {
                 "Potion" => new Color(0.15f, 0.72f, 0.33f),
                 "Weapon" => new Color(0.82f, 0.22f, 0.22f),
-                "Armour" => new Color(0.22f, 0.48f, 0.85f),
-                _ => new Color(0.75f, 0.65f, 0.18f),
+                "Helmet" => new Color(0.22f, 0.48f, 0.85f),
+                "Chest" => new Color(0.22f, 0.48f, 0.85f),
+                "Legs" => new Color(0.22f, 0.48f, 0.85f),
+                "Boots" => new Color(0.22f, 0.48f, 0.85f),
+                "Shield" => new Color(0.82f, 0.22f, 0.22f),
+                "Ring" => new Color(75f / 255f, 0f, 130f / 255f),
+                "Amulet" => new Color(75f / 255f, 0f, 130f / 255f),
+                _ => new Color(0.75f, 0.65f, 0.18f)   // жёлтый для остальных (если появятся)
             };
         }
 
@@ -347,7 +357,7 @@ public class InventoryUICode : MonoBehaviour
         {
             "Potion" => $"Лечение: <color=#3dcc66>+{item.value} HP</color>",
             "Weapon" => $"Урон: <color=#e03535>{item.value}</color>",
-            "Armour" => $"Защита: <color=#3579e0>{item.value}</color>",
+            "Armour" => $"Защита: <color=#0000ff>{item.value}</color>",
             _ => $"Значение: {item.value}"
         };
         tooltipText.text = $"<b>{item.itemName}</b>\n{typeLabel}  {valueLabel}\n" +

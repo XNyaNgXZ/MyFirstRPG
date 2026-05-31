@@ -4,52 +4,85 @@ using System.Collections.Generic;
 public class Inventory : MonoBehaviour
 {
     public List<Item> items = new List<Item>();
-    public Item equippedWeapon = null; 
+    public Item equippedWeapon = null;
+
+    public Dictionary<string, Item> equippedItems = new Dictionary<string, Item>();
+
+    public void EquipItem(Item item)
+    {
+        if (item == null) return;
+        string type = item.itemType;
+
+        if (!IsEquippableType(type))
+        {
+            Debug.Log($"Нельзя надеть предмет типа {type}");
+            return;
+        }
+
+        if (equippedItems.ContainsKey(type))
+            UnequipItem(type);
+
+        equippedItems[type] = item;
+        items.Remove(item);
+        Debug.Log($"Надето: {item.itemName} (слот: {type})");
+
+        if (type == "Weapon" && HandController.Instance != null)
+            HandController.Instance.ShowWeaponModel();
+
+        InventoryUICode.RefreshIfOpen();
+        EquipmentUI.RefreshIfOpen();
+    }
+
+    public void UnequipItem(string type)
+    {
+        if (!equippedItems.ContainsKey(type)) return;
+
+        Item item = equippedItems[type];
+        equippedItems.Remove(type);
+        items.Add(item);
+        Debug.Log($"Снято: {item.itemName}");
+
+        if (type == "Weapon" && HandController.Instance != null)
+            HandController.Instance.HideWeaponModel();
+
+        InventoryUICode.RefreshIfOpen();
+        EquipmentUI.RefreshIfOpen();
+    }
+
+    public bool IsEquippableType(string type)
+    {
+        return type == "Weapon" || type == "Helmet" || type == "Chest" ||
+               type == "Legs" || type == "Boots" || type == "Shield" ||
+               type == "Ring" || type == "Amulet";
+    }
+
+    public Item GetEquippedItem(string type)
+    {
+        return equippedItems.ContainsKey(type) ? equippedItems[type] : null;
+    }
+
+    public int GetTotalDefense()
+    {
+        int total = 0;
+        string[] armorTypes = { "Helmet", "Chest", "Legs", "Boots", "Shield", "Amulet", "Ring" };
+        foreach (string type in armorTypes)
+            if (equippedItems.ContainsKey(type))
+                total += equippedItems[type].value;
+        return total;
+    }
 
     public void AddItem(Item newItem)
     {
         items.Add(newItem);
-        Debug.Log($"Предмет '{newItem.itemName}' добавлен в инвентарь. Всего предметов: {items.Count}");
-    }
-
-    public void EquipWeapon(Item weapon)
-    {
-        if (weapon == null) return;
-        if (weapon.itemType != "Weapon")
-        {
-            Debug.Log("Это не оружие!");
-            return;
-        }
-        // Если уже экипировано другое оружие, снимаем его обратно в инвентарь
-        if (equippedWeapon == null)
-        {
-            UnequipWeapon();
-        }
-        equippedWeapon = weapon;
-        // Удаляем оружие из списка инвентаря (оно теперь экипировано)
-        items.Remove(weapon);
-        Debug.Log($"Экипировано: {weapon.itemName}. Урон +{weapon.value}");
-    }
-    public void UnequipWeapon()
-    {
-        if (equippedWeapon != null)
-        {
-            items.Add(equippedWeapon);
-            Debug.Log($"Снято: {equippedWeapon.itemName}");
-            equippedWeapon = null;
-        }
+        Debug.Log($"Предмет '{newItem.itemName}' добавлен. Всего: {items.Count}");
     }
 
     public void RemoveItem(int index)
     {
         if (index >= 0 && index < items.Count)
-        {
-            Debug.Log($"Удален предмет: {items[index].itemName}");
             items.RemoveAt(index);
-        }
     }
 
-    // Возвращает предмет и удаляет из инвентаря — для выброса в мир
     public Item TakeItem(int index)
     {
         if (index < 0 || index >= items.Count) return null;
@@ -61,22 +94,17 @@ public class Inventory : MonoBehaviour
     public void UseItem(int index)
     {
         if (index < 0 || index >= items.Count) return;
-
         Item item = items[index];
-        Debug.Log($"Используем предмет {item.itemName}");
 
         switch (item.itemType)
         {
             case "Potion":
-                PlayerHealth playerHealth = GetComponent<PlayerHealth>();
-                if (playerHealth != null)
-                    playerHealth.Heal(item.value);
-                else
-                    Debug.Log("Нет компонента PlayerHealth!");
+                PlayerHealth ph = GetComponent<PlayerHealth>();
+                if (ph != null) ph.Heal(item.value);
                 RemoveItem(index);
                 break;
             default:
-                Debug.Log($"Неизвестный тип предмета: {item.itemType}");
+                Debug.Log($"Неизвестный тип: {item.itemType}");
                 break;
         }
     }

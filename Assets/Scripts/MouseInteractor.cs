@@ -23,72 +23,56 @@ public class MouseInteractor : MonoBehaviour
 
     void Update()
     {
+        if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
+
+        // ЛКМ — атака / подбор (анимацию запускает HandController отдельно)
         if (Input.GetMouseButtonDown(0))
         {
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
-                return;
-
-            if (Cursor.lockState == CursorLockMode.Locked)
-            {
-                Debug.Log("ЛКМ заблокирован, т.к. зажата ПКМ");
-                return;
-            }
-
-            Ray ray = playerCamera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             RaycastHit hit;
             if (Physics.Raycast(ray, out hit, interactionRange))
             {
                 GameObject target = hit.collider.gameObject;
-                Debug.Log($"Кликнули по {target.name} (тег: {target.tag})");
+                Debug.Log($"Попали в: {target.name} (тег: {target.tag})");
 
-                ItemData itemData = target.GetComponent<ItemData>();
-                if (itemData != null)
+                if (target.CompareTag("Enemy"))
                 {
-                    Debug.Log($"Подобран предмет: {itemData.itemName}");
-                    if (inventory != null)
+                    EnemyNav enemy = target.GetComponent<EnemyNav>();
+                    if (enemy != null)
                     {
-                        Item newItem = new Item(itemData.itemName, itemData.itemType, itemData.value);
-                        inventory.AddItem(newItem);
-                        InventoryUICode.RefreshIfOpen();
-
-                        if (pickupSound != null)
-                        {
-                            AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
-                        }
-                        Destroy(target);
-                    }
-                    else
-                    {
-                        Debug.LogWarning("Инвентарь не найден, предмет не добавлен");
+                        int damage = 1;
+                        Item weapon = inventory?.GetEquippedItem("Weapon");
+                        if (weapon != null) damage += weapon.value;
+                        enemy.TakeDamage(damage);
+                        Debug.Log($"Атака по {target.name}. Урон: {damage}");
                     }
                 }
                 else if (target.CompareTag("NPC"))
                 {
-                    Debug.Log("Привет, путник! У нас завелись крысы в подвале, не смог бы ты нам помочь с этим?");
+                    Debug.Log("Привет, путник!");
                 }
-                else if (target.CompareTag("Enemy"))
-                {
-                    EnemyNav enemy = target.GetComponent<EnemyNav>();
-                    int damage = 1; // Базовый урон
-                    if (enemy != null && inventory.equippedWeapon != null)
-                    {
-                        damage += inventory.equippedWeapon.value; // + урон от экип. оружия
-                        enemy.TakeDamage(damage); // урон от 1 клика
-                        Debug.Log($"Атака по {target.name}. Урон: {damage}");
-                    }
-                    else
-                    {
-                        Debug.LogWarning($"У объекта {target.name} есть тег Enemy, но нет компонента Enemy!");
-                    }
-                }
-                else
-                {
-                    Debug.Log($"Кликнули по объекту: {target.name}");
-                }
+                // Если ни враг, ни NPC — просто ничего (анимацию атаки запустит HandController)
             }
-            else
+            // else — промах, анимация атаки всё равно будет из HandController
+        }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            if (Physics.Raycast(ray, out RaycastHit hit, interactionRange))
             {
-                Debug.Log("Кликнули в пустоту");
+                ItemData itemData = hit.collider.GetComponent<ItemData>();
+                if (itemData != null && inventory != null)
+                {
+                    Item newItem = new Item(itemData.itemName, itemData.itemType, itemData.value);
+                    inventory.AddItem(newItem);
+                    InventoryUICode.RefreshIfOpen();
+                    if (pickupSound != null)
+                        AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
+                    Destroy(hit.collider.gameObject);
+                    if (HandController.Instance != null)
+                        HandController.Instance.PlayPickup();
+                }
             }
         }
     }
