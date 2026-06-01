@@ -18,6 +18,10 @@ public class HandController : MonoBehaviour
     {
         if (inventory == null)
             inventory = GetComponent<Inventory>();
+        // —брос триггеров, чтобы анимации не стартовали сами
+        handsAnimator.ResetTrigger("punch");
+        handsAnimator.ResetTrigger("attack");
+        handsAnimator.ResetTrigger("pickup");
     }
 
     void Update()

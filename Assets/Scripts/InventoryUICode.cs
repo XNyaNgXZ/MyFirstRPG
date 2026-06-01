@@ -7,6 +7,9 @@ public class InventoryUICode : MonoBehaviour
     public static bool IsOpen = false;
     public static InventoryUICode Instance { get; private set; }
 
+    [Header("Retro Material")]
+    public Material retroMaterial; // перетащим сюда PS1_Dynamic
+
     [Header("Drop Sound")]
     public AudioClip dropSound;
     public float dropVolume = 0.4f;
@@ -307,40 +310,58 @@ public class InventoryUICode : MonoBehaviour
         dropped.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
         dropped.tag = "Item";
 
+        // Назначаем ретро-материал (если есть)
+        Renderer rend = dropped.GetComponent<Renderer>();
+        if (retroMaterial != null)
+        {
+            rend.material = retroMaterial;
+            // Установка цвета в зависимости от типа
+            switch (item.itemType)
+            {
+                case "Potion":
+                    rend.material.color = new Color(0.15f, 0.72f, 0.33f);
+                    break;
+                case "Weapon":
+                    rend.material.color = new Color(0.82f, 0.22f, 0.22f);
+                    break;
+                case "Helmet":
+                case "Chest":
+                case "Legs":
+                case "Boots":
+                    rend.material.color = new Color(0.22f, 0.48f, 0.85f);
+                    break;
+                case "Shield":
+                    rend.material.color = new Color(0.82f, 0.22f, 0.22f);
+                    break;
+                case "Ring":
+                case "Amulet":
+                    rend.material.color = new Color(75f / 255f, 0f, 130f / 255f);
+                    break;
+                default:
+                    rend.material.color = new Color(0.75f, 0.65f, 0.18f);
+                    break;
+            }
+        }
+        else
+        {
+            // старый способ без ретро-материала
+        }
+
+        // --- ВАЖНО: Добавляем ItemData ---
         ItemData data = dropped.AddComponent<ItemData>();
         data.itemName = item.itemName;
         data.itemType = item.itemType;
         data.value = item.value;
 
+        // --- ВАЖНО: Добавляем физику (Rigidbody) и импульс ---
         Rigidbody rb = dropped.AddComponent<Rigidbody>();
-        rb.linearVelocity = transform.forward * 2f + Vector3.up * 1.5f;
+        rb.linearVelocity = transform.forward * 2f + Vector3.up * 1.5f; // или AddForce
 
-        Renderer rend = dropped.GetComponent<Renderer>();
-        if (rend != null)
-        {
-            //rend.material = new Material(Shader.Find("Standard"));
-            rend.material.color = item.itemType 
-            switch
-            {
-                "Potion" => new Color(0.15f, 0.72f, 0.33f),
-                "Weapon" => new Color(0.82f, 0.22f, 0.22f),
-                "Helmet" => new Color(0.22f, 0.48f, 0.85f),
-                "Chest" => new Color(0.22f, 0.48f, 0.85f),
-                "Legs" => new Color(0.22f, 0.48f, 0.85f),
-                "Boots" => new Color(0.22f, 0.48f, 0.85f),
-                "Shield" => new Color(0.82f, 0.22f, 0.22f),
-                "Ring" => new Color(75f / 255f, 0f, 130f / 255f),
-                "Amulet" => new Color(75f / 255f, 0f, 130f / 255f),
-                _ => new Color(0.75f, 0.65f, 0.18f)   // жёлтый для остальных (если появятся)
-            };
-        }
+        // Звук выброса (если есть)
+        if (dropSound != null)
+            AudioSource.PlayClipAtPoint(dropSound, transform.position, dropVolume);
 
         Debug.Log($"Выброшен предмет: {item.itemName}");
-
-        if (dropSound != null)
-        {
-            AudioSource.PlayClipAtPoint(dropSound, transform.position, dropVolume);
-        }
     }
 
     void ShowTooltip(Item item)

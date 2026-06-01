@@ -14,12 +14,12 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  m_FogMode: 3
+  m_Fog: 1
+  m_FogColor: {r: 0.4037736, g: 0.4037736, b: 0.4037736, a: 1}
+  m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 0
-  m_LinearFogEnd: 300
+  m_LinearFogStart: 5
+  m_LinearFogEnd: 25
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
@@ -382,7 +382,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58bba59c04124314a85a48910c69f303, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemName: Ring
+  itemName: Ring 2
   itemType: Ring
   value: 1
 --- !u!65 &83621212
@@ -905,6 +905,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67689bd7ef95cc549a8b1267f4053647, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryUICode
+  retroMaterial: {fileID: 2100000, guid: 3c4daea6ecfeea74cb39a5fbe1e5edd2, type: 2}
   dropSound: {fileID: 8300000, guid: 819a6774b6cb1da4d84228b67636d657, type: 3}
   dropVolume: 0.2
 --- !u!114 &210126787
@@ -1183,7 +1184,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  - {fileID: 2100000, guid: dee1fc5851766454ca56a43e6d34ead0, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1394,7 +1395,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -0.47603, y: 0.22, z: -2.11603}
-  m_LocalScale: {x: 10.4, y: 0.5, z: 10.4}
+  m_LocalScale: {x: 10, y: 0.5, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1280095269}
@@ -1816,6 +1817,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 79f310c9bc225114b82576251a7d9108, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyNav
+  retroMaterial: {fileID: 2100000, guid: 3c4daea6ecfeea74cb39a5fbe1e5edd2, type: 2}
   attackSound: {fileID: 8300000, guid: a038d95c2dde9324a980374b8513ddda, type: 3}
   attackVolume: 0.4
   forgetTime: 10
@@ -2569,6 +2571,55 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1280095269}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &718063935
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 718063936}
+  - component: {fileID: 718063937}
+  m_Layer: 0
+  m_Name: CameraVolume
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &718063936
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 718063935}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 821205622}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &718063937
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 718063935}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
+  m_IsGlobal: 1
+  priority: 0
+  blendDistance: 0
+  weight: 1
+  sharedProfile: {fileID: 11400000, guid: e9c2262c6f063754fba8ce5f26fe2aac, type: 2}
 --- !u!1 &741499907
 GameObject:
   m_ObjectHideFlags: 0
@@ -2789,6 +2840,7 @@ Transform:
   m_Children:
   - {fileID: 741499908}
   - {fileID: 649709177}
+  - {fileID: 718063936}
   m_Father: {fileID: 210126783}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &821205623
@@ -2815,7 +2867,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -4402,7 +4454,7 @@ GameObject:
   - component: {fileID: 1784646809}
   - component: {fileID: 1784646813}
   m_Layer: 0
-  m_Name: Ring
+  m_Name: Ring 1
   m_TagString: Item
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4513,7 +4565,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 58bba59c04124314a85a48910c69f303, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemData
-  itemName: Ring
+  itemName: Ring 1
   itemType: Ring
   value: 1
 --- !u!1 &1791797493

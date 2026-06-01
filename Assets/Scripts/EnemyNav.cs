@@ -5,6 +5,9 @@ using UnityEngine;
 
 public class EnemyNav : MonoBehaviour
 {
+    [Header("Retro Material")]
+    public Material retroMaterial; // PS1_Dynamic
+
     [Header("Sound")]
     public AudioClip attackSound;
     public float attackVolume = 0.5f;
@@ -185,22 +188,47 @@ public class EnemyNav : MonoBehaviour
 
     void DropItem()
     {
+        // Создание куба-предмета
         GameObject drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
         drop.transform.position = transform.position + Vector3.up * 0.5f;
         drop.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         drop.name = dropItemName;
+        drop.tag = "Item";
 
-        ItemData data = drop.AddComponent<ItemData>();
-        data.itemName = dropItemName;
-        data.itemType = dropItemType;
-        data.value = dropItemValue;
-
-        Rigidbody rb = drop.AddComponent<Rigidbody>();
-        rb.AddForce(Random.insideUnitSphere * 2f + Vector3.up * 2f, ForceMode.Impulse);
-
+        // Назначение ретро-материала (если есть)
         Renderer dropRend = drop.GetComponent<Renderer>();
-        if (dropRend != null)
+        if (retroMaterial != null)
         {
+            dropRend.material = retroMaterial;           // базовый материал
+            // Устанавливаем цвет в зависимости от типа (цвет остаётся ярким, поверх ретро-шейдера)
+            Color itemColor;
+            switch (dropItemType)
+            {
+                case "Potion":
+                    itemColor = Color.green;
+                    break;
+                case "Weapon":
+                    itemColor = Color.red;
+                    break;
+                case "Helmet":
+                case "Chest":
+                case "Legs":
+                case "Boots":
+                    itemColor = Color.blue;
+                    break;
+                case "Ring":
+                case "Amulet":
+                    itemColor = new Color(75f / 255f, 0f, 130f / 255f);
+                    break;
+                default:
+                    itemColor = Color.yellow;
+                    break;
+            }
+            dropRend.material.color = itemColor;
+        }
+        else
+        {
+            // fallback: старый способ – цвет напрямую
             if (dropItemType == "Potion")
                 dropRend.material.color = Color.green;
             else if (dropItemType == "Weapon")
@@ -209,6 +237,17 @@ public class EnemyNav : MonoBehaviour
                 dropRend.material.color = Color.blue;
         }
 
+        // Добавляем ItemData
+        ItemData data = drop.AddComponent<ItemData>();
+        data.itemName = dropItemName;
+        data.itemType = dropItemType;
+        data.value = dropItemValue;
+
+        // Физика
+        Rigidbody rb = drop.AddComponent<Rigidbody>();
+        rb.AddForce(Random.insideUnitSphere * 2f + Vector3.up * 2f, ForceMode.Impulse);
+
+        // Коллайдер (у примитива уже есть)
         if (drop.GetComponent<Collider>() == null)
             drop.AddComponent<BoxCollider>();
     }
