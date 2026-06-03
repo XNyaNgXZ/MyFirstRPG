@@ -1,14 +1,32 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
 public class HandController : MonoBehaviour
 {
-    [Header("Ссылки — назначь в Inspector")]
+    [Header("РЎСЃС‹Р»РєРё")]
     public Animator handsAnimator;
     public Transform weaponHolder;
     public Inventory inventory;
 
+    [Header("Р—РІСѓРєРё РєСѓР»Р°РєР°")]
+    public AudioClip punchSwingSound;    // punchsound.ogg
+    public AudioClip punchHitSound;      // PunchHit.ogg
+    public AudioClip punchMissSound;     // punchsoundmiss.ogg
+
+    [Header("Р—РІСѓРєРё РѕСЂСѓР¶РёСЏ")]
+    public AudioClip weaponSwingSound;   // SwordSlash.ogg
+    public AudioClip weaponHitSound;     // SwordSlash.ogg (РёР»Рё РѕС‚РґРµР»СЊРЅС‹Р№)
+    public AudioClip weaponMissSound;    // WeaponMiss.ogg
+
+    [Range(0f, 1f)] public float swingVolume = 0.6f;
+    [Range(0f, 1f)] public float hitVolume = 0.9f;
+    [Range(0f, 1f)] public float missVolume = 0.4f;
+
+    private AudioSource audioSource;
     private GameObject currentWeaponModel;
     private bool isAttacking = false;
+    private EnemyNav pendingEnemy = null;
+    private int pendingDamage = 0;
+    private bool hasWeaponOnAttack = false;
 
     public static HandController Instance { get; private set; }
 
@@ -18,42 +36,105 @@ public class HandController : MonoBehaviour
     {
         if (inventory == null)
             inventory = GetComponent<Inventory>();
-        // Сброс триггеров, чтобы анимации не стартовали сами
-        handsAnimator.ResetTrigger("punch");
-        handsAnimator.ResetTrigger("attack");
-        handsAnimator.ResetTrigger("pickup");
+
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        if (handsAnimator == null)
+            Debug.LogError("HandController: РЅРµ РЅР°Р·РЅР°С‡РµРЅ Animator!");
+        else
+        {
+            handsAnimator.ResetTrigger("punch");
+            handsAnimator.ResetTrigger("attack");
+            handsAnimator.ResetTrigger("pickup");
+        }
     }
 
     void Update()
     {
         if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
+        if (handsAnimator == null) return;
 
-        // Обновляем параметр оружия
         bool hasWeapon = inventory != null &&
                          inventory.GetEquippedItem("Weapon") != null;
         handsAnimator.SetBool("hasWeapon", hasWeapon);
 
         if (Input.GetMouseButtonDown(0) && !isAttacking)
+            StartAttack(hasWeapon);
+    }
+
+    void StartAttack(bool hasWeapon)
+    {
+        isAttacking = true;
+        hasWeaponOnAttack = hasWeapon;
+        pendingEnemy = null;
+        pendingDamage = 0;
+
+        // Raycast РёР· С†РµРЅС‚СЂР° СЌРєСЂР°РЅР°
+        Camera cam = GetComponentInChildren<Camera>();
+        if (cam != null)
         {
-            isAttacking = true;
-            handsAnimator.SetTrigger(hasWeapon ? "attack" : "punch");
-            Invoke(nameof(ResetAttack), 0.5f);
+            Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            if (Physics.Raycast(ray, out RaycastHit hit, 5f))
+            {
+                if (hit.collider.CompareTag("Enemy"))
+                {
+                    EnemyNav enemy = hit.collider.GetComponent<EnemyNav>();
+                    if (enemy != null)
+                    {
+                        pendingEnemy = enemy;
+                        pendingDamage = 1;
+                        Item weapon = inventory?.GetEquippedItem("Weapon");
+                        if (weapon != null) pendingDamage += weapon.value;
+                    }
+                }
+            }
         }
+
+        handsAnimator.SetTrigger(hasWeapon ? "attack" : "punch");
+
+        Invoke(nameof(ApplyStoredHit), 0.2f); // в†ђ СѓСЂРѕРЅ Рё Р·РІСѓРє РїРѕРїР°РґР°РЅРёСЏ С‡РµСЂРµР· 0.2 СЃРµРє
+        Invoke(nameof(ResetAttack), 0.6f);
+    }
+
+    // Р’С‹Р·С‹РІР°РµС‚СЃСЏ Animation Event РЅР° РєР°РґСЂРµ СѓРґР°СЂР°
+public void ApplyStoredHit()
+    {
+        if (pendingEnemy != null)
+        {
+            pendingEnemy.TakeDamage(pendingDamage);
+            Debug.Log($"РЈРґР°СЂ! РЈСЂРѕРЅ: {pendingDamage}");
+
+            AudioClip hit = hasWeaponOnAttack ? weaponHitSound : punchHitSound;
+            if (hit != null)
+                audioSource.PlayOneShot(hit, hitVolume);
+        }
+        else
+        {
+            // РџСЂРѕРјР°С…
+            AudioClip miss = hasWeaponOnAttack ? weaponMissSound : punchMissSound;
+            if (miss != null)
+                audioSource.PlayOneShot(miss, missVolume);
+        }
+
+        pendingEnemy = null;
+        pendingDamage = 0;
+    }
+
+    public void ApplyStoredPickup() { }
+
+    public void PlayPickup()
+    {
+        if (handsAnimator != null)
+            handsAnimator.SetTrigger("pickup");
     }
 
     void ResetAttack() => isAttacking = false;
 
-    // Анимация подбора — вызывается из MouseInteractor
-    public void PlayPickup()
-    {
-        handsAnimator.SetTrigger("pickup");
-    }
-
     public void ShowWeaponModel()
     {
-        if (currentWeaponModel != null)
-            Destroy(currentWeaponModel);
-
+        if (currentWeaponModel != null) Destroy(currentWeaponModel);
         currentWeaponModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentWeaponModel.transform.SetParent(weaponHolder, false);
         currentWeaponModel.transform.localPosition = Vector3.zero;
@@ -64,8 +145,7 @@ public class HandController : MonoBehaviour
 
     public void HideWeaponModel()
     {
-        if (currentWeaponModel != null)
-            Destroy(currentWeaponModel);
+        if (currentWeaponModel != null) Destroy(currentWeaponModel);
         currentWeaponModel = null;
     }
 }

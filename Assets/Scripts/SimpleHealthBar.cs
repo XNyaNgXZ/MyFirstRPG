@@ -1,21 +1,30 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using UnityEngine.UI;
+using System.Collections; // в†ђ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РґР»СЏ IEnumerator
 
 public class SimpleHealthBar : MonoBehaviour
 {
-    public Image healthFill;        // красная полоска (HealthBarFill)
+    public Image healthFill;
     public PlayerHealth playerHealth;
 
     private float maxWidth;
     private RectTransform fillRect;
 
-    void Start()
+    IEnumerator Start()
     {
+        yield return null; // Р¶РґС‘Рј РѕРґРёРЅ РєР°РґСЂ вЂ” UI СѓСЃРїРµРІР°РµС‚ РІС‹СЃС‚СЂРѕРёС‚СЊСЃСЏ
+
         if (healthFill == null)
-            healthFill = GetComponentInChildren<Image>(); // ищем дочерний Image
+            healthFill = GetComponentInChildren<Image>();
+
+        if (healthFill == null)
+        {
+            Debug.LogError("SimpleHealthBar: РЅРµ РЅР°Р№РґРµРЅ Image!");
+            yield break;
+        }
 
         fillRect = healthFill.GetComponent<RectTransform>();
-        maxWidth = fillRect.rect.width; // начальная ширина (при полном здоровье)
+        maxWidth = fillRect.rect.width;
 
         if (playerHealth == null)
             playerHealth = FindAnyObjectByType<PlayerHealth>();
@@ -33,7 +42,7 @@ public class SimpleHealthBar : MonoBehaviour
         if (playerHealth == null || fillRect == null) return;
 
         float percent = (float)playerHealth.currentHealth / playerHealth.maxHealth;
-        float newWidth = maxWidth * percent;
+        float newWidth = maxWidth * Mathf.Clamp01(percent);
         fillRect.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, newWidth);
     }
 }

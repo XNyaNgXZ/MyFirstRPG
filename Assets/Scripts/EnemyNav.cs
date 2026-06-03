@@ -2,7 +2,6 @@ using UnityEngine.AI;
 using UnityEngine;
 
 [RequireComponent(typeof(NavMeshAgent))]
-
 public class EnemyNav : MonoBehaviour
 {
     [Header("Retro Material")]
@@ -13,12 +12,11 @@ public class EnemyNav : MonoBehaviour
     public float attackVolume = 0.5f;
 
     private NavMeshAgent agent;
-    private LayerMask obstacleMask; // чтобы Layer считать препятствиями
 
-    //Память
-    private Vector3 lastKnownPosition; // последняя известная позиция игрока
+    // Память
+    private Vector3 lastKnownPosition;
     private bool hasLastKnownPosition = false;
-    public float forgetTime = 5f; // через какое время забудет позицию
+    public float forgetTime = 5f;
     private float timeSinceLastSeen = 0f;
 
     [Header("Stats")]
@@ -37,15 +35,18 @@ public class EnemyNav : MonoBehaviour
     private Transform player;
 
     [Header("Drop")]
-    public GameObject dropItemPrefab;
+    public GameObject dropItemPrefab;   // опционально: префаб предмета
     public string dropItemName = "Health Potion";
     public string dropItemType = "Potion";
-    public int dropItemValue = 5;
+    public int dropItemValue = 25;
 
     private Renderer rend;
 
     void Start()
     {
+        if (retroMaterial != null && rend != null)
+            rend.material = retroMaterial;
+
         currentHealth = maxHealth;
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
         rend = GetComponent<Renderer>();
@@ -53,20 +54,12 @@ public class EnemyNav : MonoBehaviour
             rend = GetComponentInChildren<Renderer>();
         UpdateColor();
 
-        // Мои объекты у которых Layer - Default (Можно и поменять отдельно на Wall для стен)
-        obstacleMask = LayerMask.GetMask("Default"); 
-        
         agent = GetComponent<NavMeshAgent>();
         if (agent != null)
         {
-            agent.speed = moveSpeed; // на агента наша переменная скорости moveSpeed
-            agent.stoppingDistance = attackRange - 0.5f; // чтобы подходил ближе
+            agent.speed = moveSpeed;
+            agent.stoppingDistance = attackRange - 0.5f;
         }
-
-        if (dropItemPrefab == null)
-            CreateDropPrefab();
-
-        //enemyController = GetComponent<CharacterController>();
     }
 
     void Update()
@@ -74,17 +67,16 @@ public class EnemyNav : MonoBehaviour
         if (player == null || agent == null) return;
 
         float distance = Vector3.Distance(transform.position, player.position);
-        // система обнаружения + препятствия (Layer - Default)
         bool canSeePlayer = false;
-        if (distance <= detectionRange) // движение к игроку, если в зоне обнаружения
+
+        // Проверка видимости (простой луч из центра)
+        if (distance <= detectionRange)
         {
-            Vector3 startPoint = transform.position + Vector3.up * 0.5f; // луч из центра тела
+            Vector3 startPoint = transform.position + Vector3.up * 0.5f;
             Vector3 direction = (player.position - startPoint).normalized;
             RaycastHit hit;
-
             if (Physics.Raycast(startPoint, direction, out hit, detectionRange))
             {
-                // Если луч попал в игрока (или в объект с тегом "Player") - видит
                 if (hit.collider.CompareTag("Player"))
                 {
                     canSeePlayer = true;
@@ -94,6 +86,7 @@ public class EnemyNav : MonoBehaviour
                 }
             }
         }
+
         if (canSeePlayer)
         {
             agent.isStopped = false;
@@ -102,46 +95,38 @@ public class EnemyNav : MonoBehaviour
         }
         else if (hasLastKnownPosition)
         {
-            // не вижу, но помню, где игрок был
             timeSinceLastSeen += Time.deltaTime;
             if (timeSinceLastSeen < forgetTime)
             {
-                // Иду к последней известной позиции
                 agent.isStopped = false;
                 agent.SetDestination(lastKnownPosition);
-                // если почти пришел - то останавливаюсь и забываю, чтобы не топтаться на месте
                 if (Vector3.Distance(transform.position, lastKnownPosition) < 0.5f)
-                {
                     hasLastKnownPosition = false;
-                }
             }
             else
             {
-                // Время уже истекло и я забыл / стало неинтересно
                 hasLastKnownPosition = false;
                 agent.isStopped = true;
             }
         }
-        else // нет цели - стоим
+        else
         {
             agent.isStopped = true;
         }
 
-        // Атака, если в радиусе атаки и прошло достаточно времени
+        // Атака
         if (distance <= attackRange && Time.time >= lastAttackTime + attackCooldown)
         {
             Attack();
-            // + небольшая пауза перед возобновлением движения
             agent.isStopped = true;
             Invoke(nameof(ResumeMovement), 0.3f);
         }
     }
+
     void ResumeMovement()
     {
-        if (agent != null && agent.isActiveAndEnabled && !agent.isStopped) 
-        {
+        if (agent != null && agent.isActiveAndEnabled && !agent.isStopped)
             agent.isStopped = false;
-        }
     }
 
     void Attack()
@@ -152,11 +137,8 @@ public class EnemyNav : MonoBehaviour
         {
             playerHealth.TakeDamage(attackDamage);
             Debug.Log($"Враг атаковал! Нанесено {attackDamage} урона.");
-        
             if (attackSound != null)
-            {
                 AudioSource.PlayClipAtPoint(attackSound, transform.position, attackVolume);
-            }
         }
     }
 
@@ -165,7 +147,6 @@ public class EnemyNav : MonoBehaviour
         currentHealth -= damage;
         Debug.Log($"Враг получил {damage} урона. Осталось здоровья: {currentHealth}");
         UpdateColor();
-
         if (currentHealth <= 0)
             Die();
     }
@@ -188,19 +169,29 @@ public class EnemyNav : MonoBehaviour
 
     void DropItem()
     {
-        // Создание куба-предмета
-        GameObject drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        drop.transform.position = transform.position + Vector3.up * 0.5f;
-        drop.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
-        drop.name = dropItemName;
-        drop.tag = "Item";
+        GameObject drop;
 
-        // Назначение ретро-материала (если есть)
+        // Используем префаб, если он назначен, иначе создаём куб
+        if (dropItemPrefab != null)
+        {
+            drop = Instantiate(dropItemPrefab, transform.position + Vector3.up * 0.5f, Quaternion.identity);
+            drop.name = dropItemName;
+        }
+        else
+        {
+            drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            drop.transform.position = transform.position + Vector3.up * 0.5f;
+            drop.transform.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            drop.name = dropItemName;
+        }
+
+        drop.tag = "Item";
         Renderer dropRend = drop.GetComponent<Renderer>();
+
+        // Назначение ретро-материала и цвета
         if (retroMaterial != null)
         {
-            dropRend.material = retroMaterial;           // базовый материал
-            // Устанавливаем цвет в зависимости от типа (цвет остаётся ярким, поверх ретро-шейдера)
+            dropRend.material = retroMaterial;
             Color itemColor;
             switch (dropItemType)
             {
@@ -247,14 +238,8 @@ public class EnemyNav : MonoBehaviour
         Rigidbody rb = drop.AddComponent<Rigidbody>();
         rb.AddForce(Random.insideUnitSphere * 2f + Vector3.up * 2f, ForceMode.Impulse);
 
-        // Коллайдер (у примитива уже есть)
+        // Коллайдер (у префаба может уже быть)
         if (drop.GetComponent<Collider>() == null)
             drop.AddComponent<BoxCollider>();
-    }
-
-    void CreateDropPrefab()
-    {
-        dropItemPrefab = new GameObject("DropPrefab");
-        dropItemPrefab.SetActive(false);
     }
 }

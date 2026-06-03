@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0.4037736, g: 0.4037736, b: 0.4037736, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.01
@@ -873,9 +873,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2f80d0b0e44fa5c418b077b55fae07f9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MouseInteractor
+  pickupCooldown: 0.65
   interactionRange: 3
-  pickupSound: {fileID: 8300000, guid: 3e50e9bc73f18994b911cbd0790229cc, type: 3}
-  pickupVolume: 0.4
+  pickupSound: {fileID: 8300000, guid: 21a10f31672b3dc4fa33640fb5a2d885, type: 3}
+  pickupVolume: 0.2
 --- !u!114 &210126785
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -889,10 +890,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Inventory
   items: []
-  equippedWeapon:
-    itemName: 
-    itemType: 
-    value: 0
+  equipWeaponSound: {fileID: 8300000, guid: 7be8e811f562663419d541b33aacded1, type: 3}
+  equipArmorSound: {fileID: 8300000, guid: 15a11d8bd8d509a4ba5c1f73690f9a1a, type: 3}
+  equipAccessorySound: {fileID: 8300000, guid: f95449732bf01e74fb45019096f5f798, type: 3}
+  unequipWeaponSound: {fileID: 8300000, guid: c8d98c9299325c04a85d5b94dc67316e, type: 3}
+  unequipArmorSound: {fileID: 8300000, guid: 6b3fdfc8247c6804ab19bc78d7a7307c, type: 3}
+  unequipAccessorySound: {fileID: 8300000, guid: 855b93928a926764b8bf14e75f9d83c3, type: 3}
+  equipVolume: 0.5
 --- !u!114 &210126786
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -920,7 +924,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69ef5135b6de5814b9846a76e93f0deb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerHealth
-  hurtSound: {fileID: 8300000, guid: 8b0415038ada89e478b02d507ca7f250, type: 3}
+  hurtSounds:
+  - {fileID: 8300000, guid: 9faa0956f4b36184fb39369009e2382b, type: 3}
+  - {fileID: 8300000, guid: 1a96acc05e2a0874785e9a99e7c4fa67, type: 3}
+  - {fileID: 8300000, guid: 8eea7a8e47b566748a9eed3cbd1158be, type: 3}
+  - {fileID: 8300000, guid: c1328d603169ad5459379d8cea784a05, type: 3}
   hurtVolume: 0.5
   maxHealth: 100
   currentHealth: 0
@@ -946,6 +954,10 @@ MonoBehaviour:
   crouchSpeed: 1.5
   standHeight: 2
   crouchHeight: 1
+  jumpSound: {fileID: 8300000, guid: 3aca1e19d0c87d143b852e5baca95144, type: 3}
+  landSound: {fileID: 8300000, guid: 0f103368b0349164a87fd08f5b3fd911, type: 3}
+  jumpVolume: 0.6
+  landVolume: 0.7
 --- !u!114 &210126789
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -960,7 +972,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Footstep
   audioSource: {fileID: 0}
   footstepSound: {fileID: 8300000, guid: 171256c5604f7634ba45a22a94a1ce9e, type: 3}
-  footstepVolume: 0.1
+  footstepVolume: 0.15
   stepInterval: 0.7
 --- !u!82 &210126790
 AudioSource:
@@ -1102,6 +1114,15 @@ MonoBehaviour:
   handsAnimator: {fileID: 300762355}
   weaponHolder: {fileID: 1728840115}
   inventory: {fileID: 0}
+  punchSwingSound: {fileID: 8300000, guid: 5e3cffc5bd717a743844ce9d66fe15ef, type: 3}
+  punchHitSound: {fileID: 8300000, guid: 63f235c8c5d23be4c987153fc50c2bd3, type: 3}
+  punchMissSound: {fileID: 8300000, guid: 5e3cffc5bd717a743844ce9d66fe15ef, type: 3}
+  weaponSwingSound: {fileID: 8300000, guid: a038d95c2dde9324a980374b8513ddda, type: 3}
+  weaponHitSound: {fileID: 8300000, guid: ec6c0a18ed156b1459a27a13aa5df2cc, type: 3}
+  weaponMissSound: {fileID: 8300000, guid: a038d95c2dde9324a980374b8513ddda, type: 3}
+  swingVolume: 0.6
+  hitVolume: 0.9
+  missVolume: 0.4
 --- !u!1 &300762350
 GameObject:
   m_ObjectHideFlags: 0
@@ -2820,7 +2841,7 @@ GameObject:
   - component: {fileID: 821205623}
   m_Layer: 0
   m_Name: MainCamera
-  m_TagString: Untagged
+  m_TagString: MainCamera
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -3236,6 +3257,208 @@ Transform:
   m_Children: []
   m_Father: {fileID: 812124261}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1101559012
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1101559013}
+  - component: {fileID: 1101559016}
+  - component: {fileID: 1101559015}
+  - component: {fileID: 1101559014}
+  m_Layer: 0
+  m_Name: QuadGrass
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1101559013
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101559012}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.034, y: 0.513, z: -0.013}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1190929015}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!64 &1101559014
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101559012}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 0
+  serializedVersion: 5
+  m_Convex: 0
+  m_CookingOptions: 30
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!23 &1101559015
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101559012}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 70eefeea37df78d47bfbcc7d9c8a572b, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &1101559016
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1101559012}
+  m_Mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1125625010
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1125625012}
+  - component: {fileID: 1125625011}
+  m_Layer: 0
+  m_Name: GrassBlade (6)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1125625011
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1125625010}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f22c902e90e102c43aec29bb065ca111, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Billboard
+--- !u!4 &1125625012
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1125625010}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.94, y: 0.305, z: 9.626}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1190929013
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1190929015}
+  - component: {fileID: 1190929016}
+  m_Layer: 0
+  m_Name: GrassBlade
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1190929015
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1190929013}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 1.938, y: 0.675, z: 3.656}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1101559013}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1190929016
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1190929013}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f22c902e90e102c43aec29bb065ca111, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Billboard
 --- !u!1 &1277331694
 GameObject:
   m_ObjectHideFlags: 0
@@ -4774,7 +4997,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1843b75c98ff72e4babc30f78ed1aafe, type: 2}
+  - {fileID: 2100000, guid: aec9b9a7c18906e42b852c62e77bb5b7, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4907,6 +5130,7 @@ SceneRoots:
   - {fileID: 410087041}
   - {fileID: 832575519}
   - {fileID: 1871692667}
+  - {fileID: 1125625012}
   - {fileID: 210126783}
   - {fileID: 819306108}
   - {fileID: 439082910}
@@ -4916,3 +5140,4 @@ SceneRoots:
   - {fileID: 478756640}
   - {fileID: 1280095269}
   - {fileID: 812124261}
+  - {fileID: 1190929015}

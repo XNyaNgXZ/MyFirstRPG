@@ -21,12 +21,22 @@ public class PlayerMovement : MonoBehaviour
     public float standHeight = 2f;
     public float crouchHeight = 1f;
 
+    [Header("Sounds")]
+    public AudioClip jumpSound;
+    public AudioClip landSound;
+    [Range(0f, 1f)] public float jumpVolume = 0.6f;
+    [Range(0f, 1f)] public float landVolume = 0.7f;
+
     private CharacterController controller;
     private bool isCrouching = false;
     private float originalWalkSpeed;
     private Vector3 originalCenter;
     private Camera playerCamera;
     private float verticalRotation = 0f;
+    private AudioSource audioSource;
+
+    // Для определения приземления
+    private bool wasGrounded = true;
 
     void Start()
     {
@@ -34,8 +44,12 @@ public class PlayerMovement : MonoBehaviour
         originalWalkSpeed = walkSpeed;
         originalCenter = controller.center;
         playerCamera = GetComponentInChildren<Camera>();
+        audioSource = GetComponent<AudioSource>();
 
-        // ✅ Сразу блокируем курсор — FPS режим
+        // Если AudioSource не добавлен вручную — добавим автоматически
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
         LockCursor();
     }
 
@@ -43,20 +57,15 @@ public class PlayerMovement : MonoBehaviour
     {
         bool uiOpen = InventoryUICode.IsOpen || EquipmentUI.IsOpen;
 
-        // ✅ Мышь вращает камеру только когда UI закрыт
         if (!uiOpen)
         {
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
             float mouseY = Input.GetAxis("Mouse Y") * verticalSensitivity;
-
             transform.Rotate(0, mouseX, 0);
             verticalRotation -= mouseY;
             verticalRotation = Mathf.Clamp(verticalRotation, -maxVerticalAngle, maxVerticalAngle);
             playerCamera.transform.localEulerAngles = new Vector3(verticalRotation, 0, 0);
-
-            // Держим курсор заблокированным
-            if (Cursor.lockState != CursorLockMode.Locked)
-                LockCursor();
+            if (Cursor.lockState != CursorLockMode.Locked) LockCursor();
         }
 
         // Движение
@@ -65,16 +74,30 @@ public class PlayerMovement : MonoBehaviour
         Vector3 moveDirection = transform.right * horizontal + transform.forward * vertical;
         if (moveDirection.magnitude > 1f) moveDirection.Normalize();
 
-        // Гравитация и прыжок
-        if (controller.isGrounded && verticalVelocity.y < 0)
+        bool isGrounded = controller.isGrounded;
+
+        // ✅ Приземление — определяем момент касания земли
+        if (!wasGrounded && isGrounded)
+        {
+            if (landSound != null)
+                audioSource.PlayOneShot(landSound, landVolume);
+        }
+        wasGrounded = isGrounded;
+
+        if (isGrounded && verticalVelocity.y < 0)
             verticalVelocity.y = -2f;
 
-        if (Input.GetButtonDown("Jump") && controller.isGrounded &&
+        // ✅ Прыжок
+        if (Input.GetButtonDown("Jump") && isGrounded &&
             Time.time >= lastJumpTime + jumpCooldown && !uiOpen)
         {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             lastJumpTime = Time.time;
+
+            if (jumpSound != null)
+                audioSource.PlayOneShot(jumpSound, jumpVolume);
         }
+
         verticalVelocity.y += gravity * Time.deltaTime;
 
         Vector3 finalMove = moveDirection * walkSpeed * Time.deltaTime;

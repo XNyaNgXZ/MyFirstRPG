@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
-using UnityEngine.EventSystems;
 
 public class MouseInteractor : MonoBehaviour
 {
+    private float lastPickupTime = -10f;
+    public float pickupCooldown = 0.8f; // секунд между подборами
+
     public float interactionRange = 5f;
     public AudioClip pickupSound;
     public float pickupVolume = 0.4f;
@@ -58,12 +60,16 @@ public class MouseInteractor : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.E))
         {
+            if (Time.time < lastPickupTime + pickupCooldown) return;
+
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, interactionRange))
             {
                 ItemData itemData = hit.collider.GetComponent<ItemData>();
                 if (itemData != null && inventory != null)
                 {
+                    lastPickupTime = Time.time; 
+
                     Item newItem = new Item(itemData.itemName, itemData.itemType, itemData.value);
                     inventory.AddItem(newItem);
                     InventoryUICode.RefreshIfOpen();
