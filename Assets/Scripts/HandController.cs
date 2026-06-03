@@ -8,18 +8,25 @@ public class HandController : MonoBehaviour
     public Inventory inventory;
 
     [Header("Звуки кулака")]
-    public AudioClip punchSwingSound;    // punchsound.ogg
-    public AudioClip punchHitSound;      // PunchHit.ogg
-    public AudioClip punchMissSound;     // punchsoundmiss.ogg
+    public AudioClip punchSwingSound;
+    public AudioClip punchHitSound;
+    public AudioClip punchMissSound;
 
     [Header("Звуки оружия")]
-    public AudioClip weaponSwingSound;   // SwordSlash.ogg
-    public AudioClip weaponHitSound;     // SwordSlash.ogg (или отдельный)
-    public AudioClip weaponMissSound;    // WeaponMiss.ogg
+    public AudioClip weaponSwingSound;
+    public AudioClip weaponHitSound;
+    public AudioClip weaponMissSound;
 
     [Range(0f, 1f)] public float swingVolume = 0.6f;
     [Range(0f, 1f)] public float hitVolume = 0.9f;
     [Range(0f, 1f)] public float missVolume = 0.4f;
+
+    [Header("Блок")]
+    public AudioClip shieldRaiseSound;         // 1 звук поднятия щита (ПКМ)
+    [Range(0f, 1f)] public float shieldVolume = 0.7f;
+
+    // Статический флаг — доступен из PlayerHealth
+    public static bool IsBlocking { get; private set; } = false;
 
     private AudioSource audioSource;
     private GameObject currentWeaponModel;
@@ -27,6 +34,7 @@ public class HandController : MonoBehaviour
     private EnemyNav pendingEnemy = null;
     private int pendingDamage = 0;
     private bool hasWeaponOnAttack = false;
+    private Vector3 pendingHitPoint;
 
     public static HandController Instance { get; private set; }
 
@@ -54,11 +62,33 @@ public class HandController : MonoBehaviour
     void Update()
     {
         if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
-        if (handsAnimator == null) return;
 
         bool hasWeapon = inventory != null &&
                          inventory.GetEquippedItem("Weapon") != null;
+        bool hasShield = inventory != null &&
+                         inventory.GetEquippedItem("Shield") != null;
+
         handsAnimator.SetBool("hasWeapon", hasWeapon);
+
+        // ✅ Блок — ПКМ + щит экипирован
+        if (hasShield)
+        {
+            if (Input.GetMouseButtonDown(1) && !IsBlocking)
+            {
+                IsBlocking = true;
+                if (shieldRaiseSound != null)
+                    audioSource.PlayOneShot(shieldRaiseSound, shieldVolume);
+            }
+            if (Input.GetMouseButtonUp(1))
+                IsBlocking = false;
+        }
+        else
+        {
+            IsBlocking = false;
+        }
+
+        // Нельзя атаковать во время блока
+        if (IsBlocking) return;
 
         if (Input.GetMouseButtonDown(0) && !isAttacking)
             StartAttack(hasWeapon);
@@ -70,14 +100,15 @@ public class HandController : MonoBehaviour
         hasWeaponOnAttack = hasWeapon;
         pendingEnemy = null;
         pendingDamage = 0;
+        pendingHitPoint = Vector3.zero;
 
-        // Raycast из центра экрана
         Camera cam = GetComponentInChildren<Camera>();
         if (cam != null)
         {
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, 5f))
             {
+                pendingHitPoint = hit.point;
                 if (hit.collider.CompareTag("Enemy"))
                 {
                     EnemyNav enemy = hit.collider.GetComponent<EnemyNav>();
@@ -93,48 +124,43 @@ public class HandController : MonoBehaviour
         }
 
         handsAnimator.SetTrigger(hasWeapon ? "attack" : "punch");
-
-        Invoke(nameof(ApplyStoredHit), 0.2f); // ← урон и звук попадания через 0.2 сек
+        Invoke(nameof(ApplyStoredHit), 0.2f);
         Invoke(nameof(ResetAttack), 0.6f);
     }
 
-    // Вызывается Animation Event на кадре удара
-public void ApplyStoredHit()
+    void ApplyStoredHit()
     {
         if (pendingEnemy != null)
         {
             pendingEnemy.TakeDamage(pendingDamage);
-            Debug.Log($"Удар! Урон: {pendingDamage}");
-
+            if (pendingHitPoint != Vector3.zero)
+                HitSpark.Spawn(pendingHitPoint, hasWeaponOnAttack);
             AudioClip hit = hasWeaponOnAttack ? weaponHitSound : punchHitSound;
-            if (hit != null)
-                audioSource.PlayOneShot(hit, hitVolume);
+            if (hit != null) audioSource.PlayOneShot(hit, hitVolume);
         }
         else
         {
-            // Промах
             AudioClip miss = hasWeaponOnAttack ? weaponMissSound : punchMissSound;
-            if (miss != null)
-                audioSource.PlayOneShot(miss, missVolume);
+            if (miss != null) audioSource.PlayOneShot(miss, missVolume);
         }
-
         pendingEnemy = null;
         pendingDamage = 0;
     }
 
-    public void ApplyStoredPickup() { }
-
     public void PlayPickup()
     {
-        if (handsAnimator != null)
-            handsAnimator.SetTrigger("pickup");
+        if (handsAnimator != null) handsAnimator.SetTrigger("pickup");
     }
+
+    public void ApplyStoredPickup() { }
 
     void ResetAttack() => isAttacking = false;
 
     public void ShowWeaponModel()
     {
+        if (weaponHolder == null) return;
         if (currentWeaponModel != null) Destroy(currentWeaponModel);
+
         currentWeaponModel = GameObject.CreatePrimitive(PrimitiveType.Cube);
         currentWeaponModel.transform.SetParent(weaponHolder, false);
         currentWeaponModel.transform.localPosition = Vector3.zero;

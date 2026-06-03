@@ -4,396 +4,507 @@ using UnityEngine.EventSystems;
 
 public class InventoryUICode : MonoBehaviour
 {
-    public static bool IsOpen = false;
+    public static bool IsOpen { get; private set; } = false;
     public static InventoryUICode Instance { get; private set; }
 
-    [Header("Retro Material")]
-    public Material retroMaterial; // перетащим сюда PS1_Dynamic
+    [Header("Материал для выброшенных предметов")]
+    public Material retroMaterial;
 
-    [Header("Drop Sound")]
+    [Header("Звук выброса")]
     public AudioClip dropSound;
-    public float dropVolume = 0.4f;
+    [Range(0f, 1f)] public float dropVolume = 0.4f;
 
     private Inventory inventory;
+    private AudioSource audioSource;
+    private GameObject inventoryCanvas;
     private GameObject inventoryPanel;
-    private Transform contentPanel;
     private GameObject tooltip;
     private Text tooltipText;
     private RectTransform tooltipRect;
 
-    private int gridColumns = 5;
-    private int gridRows = 5;
-    private float cellSize = 68f;
-    private float cellSpacing = 5f;
+    private const int COLS = 5;
+    private const int ROWS = 5;
+    private const int SLOTS = COLS * ROWS;
+    private const float CELL = 68f;
+    private const float SPACING = 6f;
+    private const float PAD = 12f;
+    private const float TITLE_H = 36f;
+    private const float DRAG_THRESHOLD = 8f;
+
+    private GameObject[] slotGOs = new GameObject[SLOTS];
+    private Image[] slotIcons = new Image[SLOTS];
+    private Text[] slotLetters = new Text[SLOTS];
+    private RectTransform[] slotRects = new RectTransform[SLOTS];
+
+    private int pendingIndex = -1;
+    private Vector2 mouseDownPos;
+    private bool isDragging = false;
+    private int dragFromIndex = -1;
+    private Item draggedItem = null;
+    private GameObject dragGhost = null;
+    private RectTransform ghostRect = null;
+
+    void Awake() => Instance = this;
 
     void Start()
     {
-        inventory = GetComponent<Inventory>();
-        Instance = this;
-        if (inventory == null)
-        {
-            Debug.LogError("InventoryUICode: на Player нет компонента Inventory!");
-            return;
-        }
+        inventory = GetComponent<Inventory>() ?? FindAnyObjectByType<Inventory>();
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
 
         if (FindAnyObjectByType<EventSystem>() == null)
         {
-            GameObject es = new GameObject("EventSystem");
+            var es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
         }
 
-        CreateInventoryUI();
+        BuildUI();
         inventoryPanel.SetActive(false);
     }
 
-    void CreateInventoryUI()
-    {
-        GameObject canvasGO = new GameObject("InventoryCanvas");
-        Canvas canvas = canvasGO.AddComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 10;
-        CanvasScaler scaler = canvasGO.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920, 1080);
-        canvasGO.AddComponent<GraphicRaycaster>();
+    // ─── Построение UI ───────────────────────────────────────────────────
 
-        // Точный размер панели под сетку
-        float gridW = gridColumns * cellSize + (gridColumns - 1) * cellSpacing;
-        float gridH = gridRows * cellSize + (gridRows - 1) * cellSpacing;
-        float pad = 12f;
-        float titleH = 36f;
-        float panelW = gridW + pad * 2;
-        float panelH = gridH + pad * 2 + titleH;
+    void BuildUI()
+    {
+        // Уничтожаем старый canvas если он остался
+        if (inventoryCanvas != null) Destroy(inventoryCanvas);
+
+        float gridW = COLS * CELL + (COLS - 1) * SPACING;
+        float gridH = ROWS * CELL + (ROWS - 1) * SPACING;
+        float panelW = gridW + PAD * 2;
+        float panelH = gridH + PAD * 2 + TITLE_H;
+
+        inventoryCanvas = new GameObject("InventoryCanvas");
+        // ✅ Canvas переживает перезапуск сцены вместе с Player
+        DontDestroyOnLoad(inventoryCanvas);
+
+        var cv = inventoryCanvas.AddComponent<Canvas>();
+        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 10;
+        var sc = inventoryCanvas.AddComponent<CanvasScaler>();
+        sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+        sc.referenceResolution = new Vector2(1920, 1080);
+        inventoryCanvas.AddComponent<GraphicRaycaster>();
 
         inventoryPanel = new GameObject("InventoryPanel");
-        inventoryPanel.transform.SetParent(canvasGO.transform, false);
-        RectTransform panelRect = inventoryPanel.AddComponent<RectTransform>();
-        panelRect.anchorMin = new Vector2(1f, 0f);
-        panelRect.anchorMax = new Vector2(1f, 0f);
-        panelRect.pivot = new Vector2(1f, 0f);
-        panelRect.sizeDelta = new Vector2(panelW, panelH);
-        panelRect.anchoredPosition = new Vector2(-20f, 20f);
+        inventoryPanel.transform.SetParent(inventoryCanvas.transform, false);
+        var pr = inventoryPanel.AddComponent<RectTransform>();
+        pr.anchorMin = new Vector2(1, 0); pr.anchorMax = new Vector2(1, 0);
+        pr.pivot = new Vector2(1, 0);
+        pr.sizeDelta = new Vector2(panelW, panelH);
+        pr.anchoredPosition = new Vector2(-20, 20);
         inventoryPanel.AddComponent<Image>().color = new Color(0.13f, 0.13f, 0.16f, 1f);
 
-        // Заголовок
-        GameObject titleGO = new GameObject("Title");
-        titleGO.transform.SetParent(inventoryPanel.transform, false);
-        RectTransform titleRect = titleGO.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.pivot = new Vector2(0.5f, 1);
-        titleRect.sizeDelta = new Vector2(0, titleH);
-        titleRect.anchoredPosition = Vector2.zero;
-        Text titleTxt = titleGO.AddComponent<Text>();
-        titleTxt.text = "ИНВЕНТАРЬ  [TAB]";
-        titleTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        titleTxt.fontSize = 14;
-        titleTxt.color = new Color(0.65f, 0.65f, 0.75f, 1f);
-        titleTxt.alignment = TextAnchor.MiddleCenter;
+        MakeLabel(inventoryPanel.transform, "ИНВЕНТАРЬ [ТАБ]",
+            new Vector2(0, 1), new Vector2(1, 1), new Vector2(0.5f, 1),
+            new Vector2(0, TITLE_H), Vector2.zero, 18, new Color(0.65f, 0.65f, 0.75f));
 
-        // Разделитель
-        GameObject lineGO = new GameObject("Line");
-        lineGO.transform.SetParent(inventoryPanel.transform, false);
-        RectTransform lineRect = lineGO.AddComponent<RectTransform>();
-        lineRect.anchorMin = new Vector2(0, 1);
-        lineRect.anchorMax = new Vector2(1, 1);
-        lineRect.pivot = new Vector2(0.5f, 1);
-        lineRect.sizeDelta = new Vector2(-pad * 2, 1);
-        lineRect.anchoredPosition = new Vector2(0, -titleH);
-        lineGO.AddComponent<Image>().color = new Color(0.3f, 0.3f, 0.38f, 1f);
+        var ln = new GameObject("Line"); ln.transform.SetParent(inventoryPanel.transform, false);
+        var lr = ln.AddComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0, 1); lr.anchorMax = new Vector2(1, 1);
+        lr.pivot = new Vector2(0.5f, 1); lr.sizeDelta = new Vector2(-PAD * 2, 1);
+        lr.anchoredPosition = new Vector2(0, -TITLE_H);
+        ln.AddComponent<Image>().color = new Color(0.3f, 0.3f, 0.38f, 1f);
 
-        // Контейнер сетки — строго по размеру ячеек, по центру
-        GameObject content = new GameObject("Content");
-        content.transform.SetParent(inventoryPanel.transform, false);
-        RectTransform contentRect = content.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0.5f, 0.5f);
-        contentRect.anchorMax = new Vector2(0.5f, 0.5f);
-        contentRect.pivot = new Vector2(0.5f, 0.5f);
-        contentRect.sizeDelta = new Vector2(gridW, gridH);
-        // Смещаем вниз на половину заголовка чтобы сетка была по центру оставшегося места
-        contentRect.anchoredPosition = new Vector2(0, -(titleH / 2f));
+        var grid = new GameObject("Grid");
+        grid.transform.SetParent(inventoryPanel.transform, false);
+        var gr = grid.AddComponent<RectTransform>();
+        gr.anchorMin = new Vector2(0.5f, 0.5f); gr.anchorMax = new Vector2(0.5f, 0.5f);
+        gr.pivot = new Vector2(0.5f, 0.5f);
+        gr.sizeDelta = new Vector2(gridW, gridH);
+        gr.anchoredPosition = new Vector2(0, -(TITLE_H / 2));
 
-        GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
-        grid.cellSize = new Vector2(cellSize, cellSize);
-        grid.spacing = new Vector2(cellSpacing, cellSpacing);
-        grid.padding = new RectOffset(0, 0, 0, 0);
-        grid.startCorner = GridLayoutGroup.Corner.UpperLeft;
-        grid.startAxis = GridLayoutGroup.Axis.Horizontal;
-        grid.childAlignment = TextAnchor.UpperLeft;
-        grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
-        grid.constraintCount = gridColumns;
-
-        contentPanel = content.transform;
-
-        // Тултип
-        tooltip = new GameObject("Tooltip");
-        tooltip.transform.SetParent(canvasGO.transform, false);
-        tooltipRect = tooltip.AddComponent<RectTransform>();
-        tooltipRect.sizeDelta = new Vector2(190, 90);
-        tooltipRect.pivot = new Vector2(0, 1);
-        tooltip.AddComponent<Image>().color = new Color(0.07f, 0.07f, 0.1f, 1f);
-
-        GameObject ttTextGO = new GameObject("TooltipText");
-        ttTextGO.transform.SetParent(tooltip.transform, false);
-        RectTransform ttRect = ttTextGO.AddComponent<RectTransform>();
-        ttRect.anchorMin = Vector2.zero;
-        ttRect.anchorMax = Vector2.one;
-        ttRect.offsetMin = new Vector2(10, 8);
-        ttRect.offsetMax = new Vector2(-10, -8);
-        tooltipText = ttTextGO.AddComponent<Text>();
-        tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        tooltipText.color = Color.white;
-        tooltipText.fontSize = 13;
-        tooltipText.alignment = TextAnchor.UpperLeft;
-        tooltipText.supportRichText = true;
-
-        tooltip.SetActive(false);
+        for (int i = 0; i < SLOTS; i++) CreateSlot(i, grid.transform);
+        BuildTooltip();
     }
+
+    void CreateSlot(int index, Transform parent)
+    {
+        int col = index % COLS, row = index / COLS;
+        float x = col * (CELL + SPACING), y = -row * (CELL + SPACING);
+
+        var go = new GameObject($"Slot_{index}");
+        go.transform.SetParent(parent, false);
+        var rt = go.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.sizeDelta = new Vector2(CELL, CELL);
+        rt.anchoredPosition = new Vector2(x, y);
+        go.AddComponent<Image>().color = new Color(0.20f, 0.20f, 0.24f, 1f);
+
+        var iconGO = new GameObject("Icon"); iconGO.transform.SetParent(go.transform, false);
+        iconGO.transform.SetSiblingIndex(0);
+        var ir = iconGO.AddComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0.05f, 0.05f); ir.anchorMax = new Vector2(0.95f, 0.95f);
+        ir.offsetMin = ir.offsetMax = Vector2.zero;
+        var iconImg = iconGO.AddComponent<Image>(); iconImg.color = new Color(0, 0, 0, 0);
+
+        var lGO = new GameObject("Letter"); lGO.transform.SetParent(go.transform, false);
+        var llr = lGO.AddComponent<RectTransform>();
+        llr.anchorMin = new Vector2(0, 0.2f); llr.anchorMax = Vector2.one;
+        llr.offsetMin = llr.offsetMax = Vector2.zero;
+        var lt = lGO.AddComponent<Text>();
+        lt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        lt.fontSize = 24; lt.fontStyle = FontStyle.Bold;
+        lt.color = new Color(1, 1, 1, 0.7f); lt.alignment = TextAnchor.MiddleCenter;
+
+        slotGOs[index] = go; slotIcons[index] = iconImg;
+        slotLetters[index] = lt; slotRects[index] = rt;
+
+        int ci = index;
+        var et = go.AddComponent<EventTrigger>();
+
+        AddEvent(et, EventTriggerType.PointerEnter, _ =>
+        {
+            if (isDragging || !Safe(ci)) return;
+            var item = inventory.items[ci];
+            if (item != null && tooltip != null)
+            {
+                tooltipText.text = $"<b>{item.itemName}</b>\n{item.itemType}  |  {item.value}\n" +
+                    "ЛКМ — надеть/использовать\nЛКМ+drag — переместить\nПКМ — выбросить";
+                tooltip.SetActive(true);
+            }
+        });
+
+        AddEvent(et, EventTriggerType.PointerExit, _ =>
+        {
+            if (tooltip != null) tooltip.SetActive(false);
+        });
+
+        AddEvent(et, EventTriggerType.PointerDown, ev =>
+        {
+            var ped = (PointerEventData)ev;
+            if (ped.button == PointerEventData.InputButton.Left)
+            {
+                if (!Safe(ci) || inventory.items[ci] == null) return;
+                pendingIndex = ci;
+                mouseDownPos = Input.mousePosition;
+                if (tooltip != null) tooltip.SetActive(false);
+            }
+            else if (ped.button == PointerEventData.InputButton.Right)
+            {
+                DropItemToWorld(ci);
+            }
+        });
+    }
+
+    // ─── Update ──────────────────────────────────────────────────────────
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            IsOpen = !IsOpen;
-            inventoryPanel.SetActive(IsOpen);
+        HandleOpenClose();
+        HandleDragLogic();
+        UpdateTooltipPos();
+    }
 
-            if (IsOpen)
-            {
-                RefreshInventoryUI();
-                PlayerMovement.UnlockCursor();
-            }
-            else
-            {
-                HideTooltip();
-                PlayerMovement.LockCursor();
-            }
-        }
-
-        // Тултип следует за курсором
-        if (tooltip != null && tooltip.activeSelf)
+    void HandleOpenClose()
+    {
+        if (!Input.GetKeyDown(KeyCode.Tab)) return;
+        IsOpen = !IsOpen;
+        inventoryPanel.SetActive(IsOpen);
+        if (IsOpen) { RefreshSlots(); PlayerMovement.UnlockCursor(); }
+        else
         {
-            Vector2 mp = Input.mousePosition;
-            float ox = 15f, oy = -15f;
-            if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width) ox = -tooltipRect.sizeDelta.x - 5f;
-            if (mp.y + oy - tooltipRect.sizeDelta.y < 0) oy = tooltipRect.sizeDelta.y + 5f;
-            tooltipRect.position = new Vector3(mp.x + ox, mp.y + oy, 0);
+            PlayerMovement.LockCursor();
+            if (tooltip != null) tooltip.SetActive(false);
+            if (isDragging) CancelDrag();
+            pendingIndex = -1;
         }
     }
 
-    void RefreshInventoryUI()
+    void HandleDragLogic()
     {
-        foreach (Transform child in contentPanel)
-            Destroy(child.gameObject);
+        bool dragStartedThisFrame = false;
 
-        int total = gridColumns * gridRows;
-        for (int i = 0; i < total; i++)
+        if (pendingIndex >= 0 && !isDragging)
         {
-            Item item = i < inventory.items.Count ? inventory.items[i] : null;
-            CreateSlot(item, i);
+            float dist = Vector2.Distance(Input.mousePosition, mouseDownPos);
+            if (dist > DRAG_THRESHOLD)
+            {
+                StartDrag(pendingIndex);
+                pendingIndex = -1;
+                dragStartedThisFrame = true;
+            }
+            else if (Input.GetMouseButtonUp(0))
+            {
+                int idx = pendingIndex;
+                pendingIndex = -1;
+                ClickSlot(idx);
+            }
         }
-    }
 
-    void CreateSlot(Item item, int slotIndex)
-    {
-        GameObject slotGO = new GameObject(item != null ? item.itemName : $"Slot_{slotIndex}");
-        slotGO.transform.SetParent(contentPanel, false);
-
-        Image slotBg = slotGO.AddComponent<Image>();
-        slotBg.color = item != null
-            ? new Color(0.28f, 0.28f, 0.33f, 1f)
-            : new Color(0.20f, 0.20f, 0.24f, 1f);
-
-        if (item != null)
+        if (isDragging && !dragStartedThisFrame)
         {
-            GameObject iconGO = new GameObject("Icon");
-            iconGO.transform.SetParent(slotGO.transform, false);
-            RectTransform iconRect = iconGO.AddComponent<RectTransform>();
-            iconRect.anchorMin = new Vector2(0.1f, 0.1f);
-            iconRect.anchorMax = new Vector2(0.9f, 0.9f);
-            iconRect.offsetMin = Vector2.zero;
-            iconRect.offsetMax = Vector2.zero;
-            Image iconImg = iconGO.AddComponent<Image>();
-            iconImg.color = item.itemType switch
+            if (ghostRect != null) ghostRect.position = Input.mousePosition;
+
+            if (Input.GetMouseButtonUp(0))
             {
-                "Potion" => new Color(0.15f, 0.72f, 0.33f, 1f), // зелёный
-                "Weapon" => new Color(0.82f, 0.22f, 0.22f, 1f), // красный
-                "Helmet" => new Color(0.22f, 0.48f, 0.85f, 1f), // синий
-                "Chest" => new Color(0.22f, 0.48f, 0.85f, 1f),
-                "Legs" => new Color(0.22f, 0.48f, 0.85f, 1f),
-                "Boots" => new Color(0.22f, 0.48f, 0.85f, 1f),
-                "Shield" => new Color(0.82f, 0.22f, 0.22f, 1f),
-                "Ring" => new Color(75f / 255f, 0f, 130f / 255f, 1f), // фиолетовый
-                "Amulet" => new Color(75f / 255f, 0f, 130f / 255f, 1f),
-                _ => new Color(0.75f, 0.65f, 0.18f, 1f)  // жёлтый для неизвестных
-            };
-
-            GameObject letterGO = new GameObject("Letter");
-            letterGO.transform.SetParent(iconGO.transform, false);
-            RectTransform lRect = letterGO.AddComponent<RectTransform>();
-            lRect.anchorMin = Vector2.zero;
-            lRect.anchorMax = Vector2.one;
-            lRect.offsetMin = Vector2.zero;
-            lRect.offsetMax = Vector2.zero;
-            Text lTxt = letterGO.AddComponent<Text>();
-            lTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            lTxt.fontSize = 24;
-            lTxt.fontStyle = FontStyle.Bold;
-            lTxt.color = new Color(1f, 1f, 1f, 0.45f);
-            lTxt.alignment = TextAnchor.MiddleCenter;
-            lTxt.text = item.itemType.Length > 0 ? item.itemType[0].ToString() : "?";
-
-            EventTrigger trigger = slotGO.AddComponent<EventTrigger>();
-            Item capturedItem = item;
-            int capturedIndex = slotIndex;
-
-            var onEnter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            onEnter.callback.AddListener((_) => ShowTooltip(capturedItem));
-            trigger.triggers.Add(onEnter);
-
-            var onExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            onExit.callback.AddListener((_) => HideTooltip());
-            trigger.triggers.Add(onExit);
-
-            var onClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
-            onClick.callback.AddListener((data) =>
-            {
-                var ped = (PointerEventData)data;
-                if (ped.button == PointerEventData.InputButton.Left)
+                int invTarget = GetInvSlotUnderMouse();
+                if (invTarget >= 0)
                 {
-                    HideTooltip();
-                    if (item.itemType == "Potion")
+                    EndDragOnInvSlot(invTarget);
+                }
+                else
+                {
+                    string equipType = EquipmentUI.Instance?.GetSlotTypeUnderMouse();
+                    if (equipType != null && draggedItem != null
+                        && draggedItem.itemType == equipType)
                     {
-                        inventory.UseItem(capturedIndex);
-                        RefreshInventoryUI();
-                    }
-                    else if (inventory.IsEquippableType(item.itemType))
-                    {
-                        inventory.EquipItem(item);
-                        RefreshInventoryUI();
+                        inventory.EquipItem(draggedItem);
+                        draggedItem = null;
+                        FinishDrag();
                     }
                     else
                     {
-                        Debug.Log($"Нельзя использовать предмет типа {item.itemType}");
+                        EndDragOutside();
                     }
                 }
-                else if (ped.button == PointerEventData.InputButton.Right)
-                {
-                    HideTooltip();
-                    // Оставим пока просто выбрасывание также и оружия (как и зелья) ПОКА ЧТО
-                    DropItemToWorld(capturedIndex);
-                    RefreshInventoryUI();
-                }
-            });
-            trigger.triggers.Add(onClick);
-
-            Button btn = slotGO.AddComponent<Button>();
-            btn.targetGraphic = slotBg;
-            ColorBlock cb = btn.colors;
-            cb.normalColor = new Color(0.28f, 0.28f, 0.33f);
-            cb.highlightedColor = new Color(0.38f, 0.38f, 0.45f);
-            cb.pressedColor = new Color(0.18f, 0.18f, 0.22f);
-            btn.colors = cb;
+            }
         }
+        else if (isDragging && dragStartedThisFrame && ghostRect != null)
+        {
+            ghostRect.position = Input.mousePosition;
+        }
+    }
+
+    // ─── Действия ────────────────────────────────────────────────────────
+
+    void ClickSlot(int index)
+    {
+        if (!Safe(index)) return;
+        Item item = inventory.items[index];
+        if (item == null) return;
+        if (inventory.IsEquippableType(item.itemType))
+            inventory.EquipItem(item);
+        else if (item.itemType == "Potion")
+            inventory.UseItem(index);
+        RefreshSlots();
+    }
+
+    void StartDrag(int fromIndex)
+    {
+        if (!Safe(fromIndex) || inventory.items[fromIndex] == null) return;
+        if (inventoryCanvas == null) return;
+
+        dragFromIndex = fromIndex;
+        draggedItem = inventory.TakeItem(fromIndex);
+        isDragging = true;
+
+        dragGhost = new GameObject("DragGhost");
+        dragGhost.transform.SetParent(inventoryCanvas.transform, false);
+        ghostRect = dragGhost.AddComponent<RectTransform>();
+        ghostRect.sizeDelta = new Vector2(CELL * 0.85f, CELL * 0.85f);
+        ghostRect.pivot = new Vector2(0.5f, 0.5f);
+        var gi = dragGhost.AddComponent<Image>();
+        gi.color = GetItemColor(draggedItem); gi.raycastTarget = false;
+
+        var glGO = new GameObject("GL"); glGO.transform.SetParent(dragGhost.transform, false);
+        var glr = glGO.AddComponent<RectTransform>();
+        glr.anchorMin = Vector2.zero; glr.anchorMax = Vector2.one;
+        glr.offsetMin = glr.offsetMax = Vector2.zero;
+        var glt = glGO.AddComponent<Text>();
+        glt.text = draggedItem.itemName.Length > 0 ? draggedItem.itemName[0].ToString() : "?";
+        glt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        glt.fontSize = 24; glt.fontStyle = FontStyle.Bold;
+        glt.color = Color.white; glt.alignment = TextAnchor.MiddleCenter;
+        glt.raycastTarget = false;
+
+        RefreshSlots();
+    }
+
+    void EndDragOnInvSlot(int targetIndex)
+    {
+        if (!isDragging || draggedItem == null) return;
+        if (!Safe(targetIndex)) { EndDragOutside(); return; }
+        Item existing = inventory.items[targetIndex];
+        inventory.items[targetIndex] = draggedItem;
+        if (existing != null && Safe(dragFromIndex))
+            inventory.items[dragFromIndex] = existing;
+        FinishDrag();
+    }
+
+    void EndDragOutside()
+    {
+        if (!isDragging || draggedItem == null) return;
+        SpawnItemInWorld(draggedItem);
+        FinishDrag();
+    }
+
+    void CancelDrag()
+    {
+        if (!isDragging || draggedItem == null) return;
+        if (Safe(dragFromIndex) && inventory.items[dragFromIndex] == null)
+            inventory.items[dragFromIndex] = draggedItem;
+        else
+            inventory.AddItem(draggedItem);
+        FinishDrag();
+    }
+
+    void FinishDrag()
+    {
+        isDragging = false; draggedItem = null;
+        dragFromIndex = -1; pendingIndex = -1;
+        if (dragGhost != null) { Destroy(dragGhost); dragGhost = null; ghostRect = null; }
+        RefreshSlots();
     }
 
     void DropItemToWorld(int index)
     {
+        if (!Safe(index)) return;
         Item item = inventory.TakeItem(index);
         if (item == null) return;
+        SpawnItemInWorld(item);
+        RefreshSlots();
+    }
 
-        Vector3 dropPos = transform.position + transform.forward * 1.2f + Vector3.up * 0.5f;
+    void SpawnItemInWorld(Item item)
+    {
+        if (item == null) return;
+        if (dropSound != null && audioSource != null)
+            audioSource.PlayOneShot(dropSound, dropVolume);
 
-        GameObject dropped = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        dropped.name = item.itemName;
-        dropped.transform.position = dropPos;
-        dropped.transform.localScale = new Vector3(0.4f, 0.4f, 0.4f);
-        dropped.tag = "Item";
+        Vector3 pos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
+        var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        drop.transform.position = pos; drop.transform.localScale = Vector3.one * 0.4f;
+        drop.name = item.itemName; drop.tag = "Item";
 
-        // Назначаем ретро-материал (если есть)
-        Renderer rend = dropped.GetComponent<Renderer>();
-        if (retroMaterial != null)
+        var rend = drop.GetComponent<Renderer>();
+        if (retroMaterial != null) rend.material = retroMaterial;
+        rend.material.color = GetItemColor(item);
+
+        var data = drop.AddComponent<ItemData>();
+        data.itemName = item.itemName; data.itemType = item.itemType; data.value = item.value;
+
+        drop.AddComponent<Rigidbody>()
+            .AddForce(transform.forward * 3f + Vector3.up * 2f, ForceMode.Impulse);
+    }
+
+    // ─── Обновление слотов ───────────────────────────────────────────────
+
+    void RefreshSlots()
+    {
+        if (inventory == null || inventory.items == null) return;
+
+        for (int i = 0; i < SLOTS; i++)
         {
-            rend.material = retroMaterial;
-            // Установка цвета в зависимости от типа
-            switch (item.itemType)
+            if (!Safe(i)) break;
+
+            var go = slotGOs[i];
+            var ico = slotIcons[i];
+            var let = slotLetters[i];
+
+            // ✅ Проверяем и null и destroyed
+            if (go == null || !go) { RebuildUIIfNeeded(); return; }
+            if (ico == null || !ico || let == null || !let) continue;
+
+            bool ghost = isDragging && i == dragFromIndex;
+            Item item = ghost ? null : inventory.items[i];
+            // ✅ Пустой itemName = пустой слот
+            if (item != null && string.IsNullOrEmpty(item.itemName))
+                item = null;
+
+            if (item != null)
             {
-                case "Potion":
-                    rend.material.color = new Color(0.15f, 0.72f, 0.33f);
-                    break;
-                case "Weapon":
-                    rend.material.color = new Color(0.82f, 0.22f, 0.22f);
-                    break;
-                case "Helmet":
-                case "Chest":
-                case "Legs":
-                case "Boots":
-                    rend.material.color = new Color(0.22f, 0.48f, 0.85f);
-                    break;
-                case "Shield":
-                    rend.material.color = new Color(0.82f, 0.22f, 0.22f);
-                    break;
-                case "Ring":
-                case "Amulet":
-                    rend.material.color = new Color(75f / 255f, 0f, 130f / 255f);
-                    break;
-                default:
-                    rend.material.color = new Color(0.75f, 0.65f, 0.18f);
-                    break;
+                ico.color = GetItemColor(item);
+                // ✅ string.IsNullOrEmpty вместо item.itemName.Length
+                let.text = !string.IsNullOrEmpty(item.itemName)
+                             ? item.itemName[0].ToString() : "?";
+                let.color = Color.white;
             }
+            else
+            {
+                ico.color = new Color(0, 0, 0, 0);
+                let.text = "";
+            }
+
         }
-        else
+    }
+
+    // ✅ Пересобирает UI если он был уничтожен (перезапуск сцены)
+    void RebuildUIIfNeeded()
+    {
+        BuildUI();
+        inventoryPanel.SetActive(IsOpen);
+    }
+
+    // ─── Вспомогательные ─────────────────────────────────────────────────
+
+    bool Safe(int i) =>
+        inventory != null && inventory.items != null && i >= 0 && i < inventory.items.Length;
+
+    int GetInvSlotUnderMouse()
+    {
+        for (int i = 0; i < SLOTS; i++)
         {
-            // старый способ без ретро-материала
+            if (slotRects[i] == null) continue;
+            if (RectTransformUtility.RectangleContainsScreenPoint(
+                    slotRects[i], Input.mousePosition, null))
+                return i;
         }
-
-        // --- ВАЖНО: Добавляем ItemData ---
-        ItemData data = dropped.AddComponent<ItemData>();
-        data.itemName = item.itemName;
-        data.itemType = item.itemType;
-        data.value = item.value;
-
-        // --- ВАЖНО: Добавляем физику (Rigidbody) и импульс ---
-        Rigidbody rb = dropped.AddComponent<Rigidbody>();
-        rb.linearVelocity = transform.forward * 2f + Vector3.up * 1.5f; // или AddForce
-
-        // Звук выброса (если есть)
-        if (dropSound != null)
-            AudioSource.PlayClipAtPoint(dropSound, transform.position, dropVolume);
-
-        Debug.Log($"Выброшен предмет: {item.itemName}");
+        return -1;
     }
 
-    void ShowTooltip(Item item)
+    Color GetItemColor(Item item)
     {
-        tooltip.SetActive(true);
-        string typeLabel = item.itemType switch
+        if (item == null) return Color.gray;
+        return item.itemType switch
         {
-            "Potion" => "<color=#3dcc66>Зелье</color>",
-            "Weapon" => "<color=#e03535>Оружие</color>",
-            "Armour" => "<color=#3579e0>Броня</color>",
-            _ => item.itemType
+            "Potion" => new Color(0.2f, 0.8f, 0.3f),
+            "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+            "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
+            "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
+            _ => new Color(0.6f, 0.6f, 0.6f)
         };
-        string valueLabel = item.itemType switch
-        {
-            "Potion" => $"Лечение: <color=#3dcc66>+{item.value} HP</color>",
-            "Weapon" => $"Урон: <color=#e03535>{item.value}</color>",
-            "Armour" => $"Защита: <color=#0000ff>{item.value}</color>",
-            _ => $"Значение: {item.value}"
-        };
-        tooltipText.text = $"<b>{item.itemName}</b>\n{typeLabel}  {valueLabel}\n" +
-                           $"<color=#666666>ЛКМ — использовать  |  ПКМ — выбросить</color>";
     }
 
-    void HideTooltip()
+    void UpdateTooltipPos()
     {
-        if (tooltip != null) tooltip.SetActive(false);
+        if (tooltip == null || !tooltip.activeSelf) return;
+        Vector2 mp = Input.mousePosition;
+        float ox = 15f, oy = -15f;
+        if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width) ox = -tooltipRect.sizeDelta.x - 5f;
+        if (mp.y + oy - tooltipRect.sizeDelta.y < 0) oy = tooltipRect.sizeDelta.y + 5f;
+        tooltipRect.position = new Vector3(mp.x + ox, mp.y + oy, 0);
     }
+
+    void BuildTooltip()
+    {
+        tooltip = new GameObject("InvTooltip");
+        tooltip.transform.SetParent(inventoryCanvas.transform, false);
+        tooltipRect = tooltip.AddComponent<RectTransform>();
+        tooltipRect.sizeDelta = new Vector2(210, 75); tooltipRect.pivot = new Vector2(0, 1);
+        tooltip.AddComponent<Image>().color = new Color(0.07f, 0.07f, 0.1f, 1f);
+        var tGO = new GameObject("Text"); tGO.transform.SetParent(tooltip.transform, false);
+        var tr = tGO.AddComponent<RectTransform>();
+        tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one;
+        tr.offsetMin = new Vector2(8, 6); tr.offsetMax = new Vector2(-8, -6);
+        tooltipText = tGO.AddComponent<Text>();
+        tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tooltipText.color = Color.white; tooltipText.fontSize = 11;
+        tooltipText.supportRichText = true; tooltipText.alignment = TextAnchor.UpperLeft;
+        tooltip.SetActive(false);
+    }
+
+    void MakeLabel(Transform parent, string text, Vector2 amin, Vector2 amax,
+                   Vector2 piv, Vector2 sz, Vector2 ap, int fs, Color col)
+    {
+        var go = new GameObject("Label"); go.transform.SetParent(parent, false);
+        var r = go.AddComponent<RectTransform>();
+        r.anchorMin = amin; r.anchorMax = amax; r.pivot = piv; r.sizeDelta = sz; r.anchoredPosition = ap;
+        var t = go.AddComponent<Text>();
+        t.text = text; t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = fs; t.color = col; t.alignment = TextAnchor.MiddleCenter;
+    }
+
+    void AddEvent(EventTrigger et, EventTriggerType type, System.Action<BaseEventData> action)
+    {
+        var e = new EventTrigger.Entry { eventID = type };
+        e.callback.AddListener(ev => action(ev));
+        et.triggers.Add(e);
+    }
+
     public static void RefreshIfOpen()
     {
-        if (IsOpen && Instance != null)
-        {
-            Instance.RefreshInventoryUI();
-        }
+        if (IsOpen && Instance != null) Instance.RefreshSlots();
     }
 }

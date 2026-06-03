@@ -1,4 +1,4 @@
-using UnityEngine;
+п»їusing UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
 
@@ -6,9 +6,13 @@ public class PlayerHealth : MonoBehaviour
 {
     private Inventory inventory;
 
-    [Header("Звуки получения урона — будет случайный из списка")]
-    public AudioClip[] hurtSounds;       // Hurt1, Hurt2, Hurt3, Hurt4
+    [Header("Р—РІСѓРєРё СѓСЂРѕРЅР°")]
+    public AudioClip[] hurtSounds;
     [Range(0f, 1f)] public float hurtVolume = 0.8f;
+
+    [Header("Р—РІСѓРєРё Р±Р»РѕРєР°")]
+    public AudioClip[] blockHitSounds;        // 6 Р·РІСѓРєРѕРІ РїРѕРїР°РґР°РЅРёСЏ РїРѕ С‰РёС‚Сѓ
+    [Range(0f, 1f)] public float blockHitVolume = 0.8f;
 
     private AudioSource audioSource;
     private bool isDead = false;
@@ -23,36 +27,86 @@ public class PlayerHealth : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
 
         currentHealth = maxHealth;
-        Debug.Log($"Здоровье: {currentHealth}/{maxHealth}");
+        Debug.Log($"Р—РґРѕСЂРѕРІСЊРµ: {currentHealth}/{maxHealth}");
     }
 
     public void Heal(int amount)
     {
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
-        Debug.Log($"Вылечился на {amount}. Здоровье: {currentHealth}/{maxHealth}");
+        Debug.Log($"Р’С‹Р»РµС‡РёР»СЃСЏ РЅР° {amount}. Р—РґРѕСЂРѕРІСЊРµ: {currentHealth}/{maxHealth}");
     }
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, Transform attacker = null)
     {
         if (isDead) return;
 
+        if (HandController.IsBlocking)
+        {
+            Item shield = inventory?.GetEquippedItem("Shield");
+            int blocked = shield != null ? shield.value : 0;
+            int remaining = Mathf.Max(0, damage - blocked);
+
+            if (blockHitSounds != null && blockHitSounds.Length > 0)
+            {
+                AudioClip clip = blockHitSounds[Random.Range(0, blockHitSounds.Length)];
+                if (clip != null) audioSource.PlayOneShot(clip, blockHitVolume);
+            }
+
+            // Р›С‘РіРєР°СЏ С‚СЂСЏСЃРєР° РїСЂРё Р±Р»РѕРєРµ
+            CameraShake.Instance?.Shake(0.12f, 0.04f);
+
+            if (remaining <= 0)
+            {
+                Debug.Log("РЈРґР°СЂ РїРѕР»РЅРѕСЃС‚СЊСЋ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ!");
+                return;
+            }
+
+            damage = remaining;
+            Debug.Log($"Р§Р°СЃС‚РёС‡РЅС‹Р№ Р±Р»РѕРє. РџСЂРѕС€Р»Рѕ: {remaining}");
+        }
+
+        // РџР°СЃСЃРёРІРЅР°СЏ Р±СЂРѕРЅСЏ (С‰РёС‚ РЅРµ РІС…РѕРґРёС‚)
         int defense = inventory != null ? inventory.GetTotalDefense() : 0;
         int finalDamage = Mathf.Max(0, damage - defense);
         currentHealth -= finalDamage;
-        Debug.Log($"Получено {finalDamage} урона (защита {defense})");
+        Debug.Log($"РџРѕР»СѓС‡РµРЅРѕ {finalDamage} СѓСЂРѕРЅР° (Р±СЂРѕРЅСЏ {defense})");
 
-        if (hurtSounds != null && hurtSounds.Length > 0 && audioSource != null)
+        // РЎР»СѓС‡Р°Р№РЅС‹Р№ Р·РІСѓРє СѓСЂРѕРЅР°
+        if (hurtSounds != null && hurtSounds.Length > 0)
         {
             AudioClip clip = hurtSounds[Random.Range(0, hurtSounds.Length)];
-            if (clip != null)
-                audioSource.PlayOneShot(clip, hurtVolume);
+            if (clip != null) audioSource.PlayOneShot(clip, hurtVolume);
         }
+
+        ScreenDamageEffect.Instance?.Flash();
+        CameraShake.Instance?.Shake(0.2f, 0.08f);
+
+        // РћС‚С‚Р°Р»РєРёРІР°РЅРёРµ
+        CharacterController cc = GetComponent<CharacterController>();
+        if (attacker != null && cc != null)
+            StartCoroutine(ApplyKnockback(cc, attacker));
 
         if (currentHealth <= 0)
         {
             isDead = true;
-            Debug.Log("Вы погибли, сцена перезапустится через 2 секунды");
+            Debug.Log("Р’С‹ РїРѕРіРёР±Р»Рё, СЃС†РµРЅР° РїРµСЂРµР·Р°РїСѓСЃС‚РёС‚СЃСЏ С‡РµСЂРµР· 2 СЃРµРєСѓРЅРґС‹");
             Invoke(nameof(RestartGame), 2f);
+        }
+    }
+
+    IEnumerator ApplyKnockback(CharacterController cc, Transform attacker)
+    {
+        Vector3 dir = (transform.position - attacker.position).normalized;
+        dir.y = 0.3f;
+        float force = 4f;
+        float duration = 0.15f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            cc.Move(dir * force * (1f - elapsed / duration) * Time.deltaTime);
+            elapsed += Time.deltaTime;
+            yield return null;
         }
     }
 

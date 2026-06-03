@@ -1,4 +1,4 @@
-using System.Collections;
+Ôªøusing System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -6,6 +6,9 @@ using UnityEngine.UI;
 
 public class EquipmentUI : MonoBehaviour
 {
+    [Header("–ú–∞—Ç–µ—Ä–∏–∞–ª –¥–ª—è –≤—ã–±—Ä–æ—à–µ–Ω–Ω—ã—Ö –ø—Ä–µ–¥–º–µ—Ç–æ–≤")]
+    public Material retroMaterial;
+
     private GameObject tooltip;
     private Text tooltipText;
     private RectTransform tooltipRect;
@@ -16,63 +19,63 @@ public class EquipmentUI : MonoBehaviour
     private Inventory inventory;
 
     private Dictionary<string, GameObject> slotObjects = new Dictionary<string, GameObject>();
-    private Dictionary<string, Item> currentEquipment; // ·Û‰ÂÏ ·‡Ú¸ ËÁ inventory
+    private List<(RectTransform rect, string type)> slotRectList
+        = new List<(RectTransform, string)>();
 
     private struct SlotDef
     {
-        public string name; // ËÏˇ ÒÎÓÚ‡ (‚ ÚÛÎÚËÔÂ)
-        public string allowedType; // ÚËÔ ÔÂ‰ÏÂÚ‡, ÍÓÚÓ˚È Ì‡‰Â‚‡ÂÚÒˇ (Weapon, Helmet e.t.c.)
+        public string name;
+        public string allowedType;
     }
 
     private SlotDef[] slots = new SlotDef[]
     {
-        new SlotDef { name = "ŒÛÊËÂ", allowedType = "Weapon"},
-        new SlotDef { name = "ÿÎÂÏ", allowedType = "Helmet"},
-        new SlotDef { name = "Õ‡„ÛÌËÍ", allowedType = "Chest"},
-        new SlotDef { name = "œÓÌÓÊË", allowedType = "Legs"},
-        new SlotDef { name = "¡ÓÚËÌÍË", allowedType = "Boots"},
-        new SlotDef { name = "ŸËÚ", allowedType = "Shield"},
-        new SlotDef { name = " ÓÎ¸ˆÓ 1", allowedType = "Ring"},
-        new SlotDef { name = " ÓÎ¸ˆÓ 2", allowedType = "Ring"},
-        new SlotDef { name = " ÓÎ¸ˆÓ 3", allowedType = "Ring"},
-        new SlotDef { name = " ÓÎ¸ˆÓ 4", allowedType = "Ring"},
-        new SlotDef { name = "¿ÏÛÎÂÚ", allowedType = "Amulet"},
+        new SlotDef { name = "–û—Ä—É–∂–∏–µ",    allowedType = "Weapon"  },
+        new SlotDef { name = "–®–ª–µ–º",      allowedType = "Helmet"  },
+        new SlotDef { name = "–ù–∞–≥—Ä—É–¥–Ω–∏–∫", allowedType = "Chest"   },
+        new SlotDef { name = "–ü–æ–Ω–æ–∂–∏",    allowedType = "Legs"    },
+        new SlotDef { name = "–ë–æ—Ç–∏–Ω–∫–∏",   allowedType = "Boots"   },
+        new SlotDef { name = "–©–∏—Ç",       allowedType = "Shield"  },
+        new SlotDef { name = "–ö–æ–ª—å—Ü–æ 1",  allowedType = "Ring"    },
+        new SlotDef { name = "–ö–æ–ª—å—Ü–æ 2",  allowedType = "Ring"    },
+        new SlotDef { name = "–ö–æ–ª—å—Ü–æ 3",  allowedType = "Ring"    },
+        new SlotDef { name = "–ö–æ–ª—å—Ü–æ 4",  allowedType = "Ring"    },
+        new SlotDef { name = "–ê–º—É–ª–µ—Ç",    allowedType = "Amulet"  },
     };
 
-    private int gridColumns = 4; // ÒÍÓÎ¸ÍÓ ÒÎÓÚÓ‚ ‚ ÒÚÓÍÂ
+    private int gridColumns = 4;
     private float cellSize = 85f;
     private float cellSpacing = 8f;
     private float pad = 14f;
     private float titleH = 36f;
-
     private float inventoryPanelH = 420f;
     private float edgeOffset = 20f;
 
+    public static EquipmentUI Instance { get; private set; }
+    void Awake() => Instance = this;
+
     void Start()
     {
-        inventory = GetComponent<Inventory>();
-        if( inventory == null)
-        {
-            inventory = FindAnyObjectByType<Inventory>();
-        }
+        inventory = GetComponent<Inventory>() ?? FindAnyObjectByType<Inventory>();
+
         if (FindAnyObjectByType<EventSystem>() == null)
         {
-            GameObject es = new GameObject("EventSystem");
+            var es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
         }
+
         CreateEquipmentUI();
         equipmentPanel.SetActive(false);
     }
 
     void CreateEquipmentUI()
     {
-        //Canvas
         equipmentCanvas = new GameObject("EquipmentCanvas");
         Canvas canvas = equipmentCanvas.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 10;
-        CanvasScaler scaler = equipmentCanvas.AddComponent<CanvasScaler>();
+        var scaler = equipmentCanvas.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
         equipmentCanvas.AddComponent<GraphicRaycaster>();
@@ -83,57 +86,49 @@ public class EquipmentUI : MonoBehaviour
         float panelW = gridW + pad * 2;
         float panelH = gridH + pad * 2 + titleH;
 
-        //œ‡ÌÂÎ¸ (ÙÓÌ)
         equipmentPanel = new GameObject("EquipmentPanel");
         equipmentPanel.transform.SetParent(equipmentCanvas.transform, false);
-        RectTransform panelRect = equipmentPanel.AddComponent<RectTransform>();
+        var panelRect = equipmentPanel.AddComponent<RectTransform>();
         panelRect.anchorMin = new Vector2(1f, 0f);
         panelRect.anchorMax = new Vector2(1f, 0f);
         panelRect.pivot = new Vector2(1f, 0f);
-        panelRect.sizeDelta= new Vector2(panelW, panelH);
-        panelRect.anchoredPosition = new Vector2(
-            -edgeOffset, edgeOffset + inventoryPanelH + 10f  // 10px Á‡ÁÓ ÏÂÊ‰Û Ô‡ÌÂÎˇÏË
-        );
+        panelRect.sizeDelta = new Vector2(panelW, panelH);
+        panelRect.anchoredPosition = new Vector2(-edgeOffset, edgeOffset + inventoryPanelH + 10f);
         equipmentPanel.AddComponent<Image>().color = new Color(0.13f, 0.13f, 0.16f, 1f);
 
-        // Á‡„ÓÎÓ‚ÓÍ
-        GameObject titleGO = new GameObject("Title");
+        // –ó–∞–≥–æ–ª–æ–≤–æ–∫
+        var titleGO = new GameObject("Title");
         titleGO.transform.SetParent(equipmentPanel.transform, false);
-        RectTransform titleRect = titleGO.AddComponent<RectTransform>();
-        titleRect.anchorMin = new Vector2(0, 1);
-        titleRect.anchorMax = new Vector2(1, 1);
-        titleRect.pivot = new Vector2(0.5f, 1);
-        titleRect.sizeDelta = new Vector2(0, titleH);
-        titleRect.anchoredPosition = Vector2.zero;
-        Text titleTxt = titleGO.AddComponent<Text>();
-        titleTxt.text = "—Õ¿–ﬂ∆≈Õ»≈  [I]";
-        titleTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        titleTxt.fontSize = 18;
-        titleTxt.color = new Color(0.65f, 0.65f, 0.75f, 1f);
-        titleTxt.alignment = TextAnchor.MiddleCenter;
+        var tr = titleGO.AddComponent<RectTransform>();
+        tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
+        tr.pivot = new Vector2(0.5f, 1);
+        tr.sizeDelta = new Vector2(0, titleH); tr.anchoredPosition = Vector2.zero;
+        var tt = titleGO.AddComponent<Text>();
+        tt.text = "–°–ù–ê–†–Ø–ñ–ï–ù–ò–ï  [I]";
+        tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tt.fontSize = 18; tt.color = new Color(0.65f, 0.65f, 0.75f);
+        tt.alignment = TextAnchor.MiddleCenter;
 
-        // –‡Á‰ÂÎËÚÂÎ¸
-        GameObject lineGO = new GameObject("Line");
+        // –†–∞–∑–¥–µ–ª–∏—Ç–µ–ª—å
+        var lineGO = new GameObject("Line");
         lineGO.transform.SetParent(equipmentPanel.transform, false);
-        RectTransform lineRect = lineGO.AddComponent<RectTransform>();
-        lineRect.anchorMin = new Vector2(0, 1);
-        lineRect.anchorMax = new Vector2(1, 1);
-        lineRect.pivot = new Vector2(0.5f, 1);
-        lineRect.sizeDelta = new Vector2(-pad * 2, 1);
-        lineRect.anchoredPosition = new Vector2(0, -titleH);
+        var lr = lineGO.AddComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0, 1); lr.anchorMax = new Vector2(1, 1);
+        lr.pivot = new Vector2(0.5f, 1);
+        lr.sizeDelta = new Vector2(-pad * 2, 1);
+        lr.anchoredPosition = new Vector2(0, -titleH);
         lineGO.AddComponent<Image>().color = new Color(0.3f, 0.3f, 0.38f, 1f);
 
-        //ÍÓÌÚÂÈÌÂ ‰Îˇ ÒÎÓÚÓ‚
-        GameObject content = new GameObject("Content");
+        // –ö–æ–Ω—Ç–µ–π–Ω–µ—Ä —Å–ª–æ—Ç–æ–≤
+        var content = new GameObject("Content");
         content.transform.SetParent(equipmentPanel.transform, false);
-        RectTransform contentRect = content.AddComponent<RectTransform>();
-        contentRect.anchorMin = new Vector2(0.5f, 0.5f);
-        contentRect.anchorMax = new Vector2(0.5f, 0.5f);
-        contentRect.pivot = new Vector2(0.5f, 0.5f);
-        contentRect.sizeDelta = new Vector2(gridW, gridH);
-        contentRect.anchoredPosition = new Vector2(0, -(titleH / 2f));
+        var cr = content.AddComponent<RectTransform>();
+        cr.anchorMin = new Vector2(0.5f, 0.5f); cr.anchorMax = new Vector2(0.5f, 0.5f);
+        cr.pivot = new Vector2(0.5f, 0.5f);
+        cr.sizeDelta = new Vector2(gridW, gridH);
+        cr.anchoredPosition = new Vector2(0, -(titleH / 2f));
 
-        GridLayoutGroup grid = content.AddComponent<GridLayoutGroup>();
+        var grid = content.AddComponent<GridLayoutGroup>();
         grid.cellSize = new Vector2(cellSize, cellSize);
         grid.spacing = new Vector2(cellSpacing, cellSpacing);
         grid.padding = new RectOffset(0, 0, 0, 0);
@@ -142,155 +137,197 @@ public class EquipmentUI : MonoBehaviour
         grid.childAlignment = TextAnchor.UpperLeft;
         grid.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         grid.constraintCount = gridColumns;
-
         slotsContainer = content.transform;
 
-        // ÒÓÁ‰‡ÌËÂ ÒÎÓÚÓ‚
         for (int i = 0; i < slots.Length; i++)
-        {
             CreateSlot(i, slots[i]);
-        }
 
-        // “ÛÎÚËÔ
-        tooltip = new GameObject("Tooltip");
+        // –¢—É–ª—Ç–∏–ø
+        tooltip = new GameObject("EqTooltip");
         tooltip.transform.SetParent(equipmentCanvas.transform, false);
         tooltipRect = tooltip.AddComponent<RectTransform>();
-        tooltipRect.sizeDelta = new Vector2(180, 60);
+        tooltipRect.sizeDelta = new Vector2(190, 70);
         tooltipRect.pivot = new Vector2(0, 1);
         tooltip.AddComponent<Image>().color = new Color(0.07f, 0.07f, 0.1f, 1f);
 
-        GameObject ttTextGO = new GameObject("TooltipText");
-        ttTextGO.transform.SetParent(tooltip.transform, false);
-        RectTransform ttRect = ttTextGO.AddComponent<RectTransform>();
-        ttRect.anchorMin = Vector2.zero; ttRect.anchorMax = Vector2.one;
-        ttRect.offsetMin = new Vector2(8, 6); ttRect.offsetMax = new Vector2(-8, -6);
-        tooltipText = ttTextGO.AddComponent<Text>();
+        var ttGO = new GameObject("TooltipText");
+        ttGO.transform.SetParent(tooltip.transform, false);
+        var ttr = ttGO.AddComponent<RectTransform>();
+        ttr.anchorMin = Vector2.zero; ttr.anchorMax = Vector2.one;
+        ttr.offsetMin = new Vector2(8, 6); ttr.offsetMax = new Vector2(-8, -6);
+        tooltipText = ttGO.AddComponent<Text>();
         tooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        tooltipText.color = Color.white;
-        tooltipText.fontSize = 12;
+        tooltipText.color = Color.white; tooltipText.fontSize = 12;
         tooltipText.supportRichText = true;
         tooltipText.alignment = TextAnchor.UpperLeft;
         tooltip.SetActive(false);
     }
+
     void CreateSlot(int idx, SlotDef slotDef)
     {
         Color normalColor = new Color(0.20f, 0.20f, 0.24f, 1f);
-        Color highlightColor = new Color(0.30f, 0.30f, 0.36f, 1f);
-        Color pressColor = new Color(0.40f, 0.35f, 0.20f, 1f);
 
-        GameObject slotGO = new GameObject($"Slot_{slotDef.name}");
+        var slotGO = new GameObject($"Slot_{slotDef.name}");
         slotGO.transform.SetParent(slotsContainer, false);
         slotObjects[slotDef.allowedType] = slotGO;
 
-        //‘ÓÌ —ÎÓÚ‡
         Image bgImage = slotGO.AddComponent<Image>();
-        bgImage.color = new Color(0.2f, 0.2f, 0.24f, 1f);
+        bgImage.color = normalColor;
 
-        // œÓ‰ÔËÒ¸ ÒÎÓÚ‡ ÒÌËÁÛ
-        GameObject labelGO = new GameObject("Label");
+        // –ò–∫–æ–Ω–∫–∞ (–∑–∞ —Ç–µ–∫—Å—Ç–æ–º)
+        var iconGO = new GameObject("Icon");
+        iconGO.transform.SetParent(slotGO.transform, false);
+        iconGO.transform.SetSiblingIndex(0);
+        var ir = iconGO.AddComponent<RectTransform>();
+        ir.anchorMin = new Vector2(0.05f, 0.05f);
+        ir.anchorMax = new Vector2(0.95f, 0.95f);
+        ir.offsetMin = ir.offsetMax = Vector2.zero;
+        var iconImg = iconGO.AddComponent<Image>();
+        iconImg.color = new Color(0, 0, 0, 0);
+
+        // –ü–æ–¥–ø–∏—Å—å —Å–Ω–∏–∑—É
+        var labelGO = new GameObject("Label");
         labelGO.transform.SetParent(slotGO.transform, false);
-        RectTransform labelRect = labelGO.AddComponent<RectTransform>();
-        labelRect.anchorMin = new Vector2(0, 0);
-        labelRect.anchorMax = new Vector2(1, 0);
-        labelRect.pivot = new Vector2(0.5f, 0);
-        labelRect.sizeDelta = new Vector2(0, 20);
-        labelRect.anchoredPosition = Vector2.zero;
-        Text labelTxt = labelGO.AddComponent<Text>();
-        labelTxt.text = slotDef.name;
-        labelTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        labelTxt.fontSize = 10;
-        labelTxt.color = new Color(0.6f, 0.6f, 0.7f, 1f);
-        labelTxt.alignment = TextAnchor.MiddleCenter;
+        var labr = labelGO.AddComponent<RectTransform>();
+        labr.anchorMin = new Vector2(0, 0); labr.anchorMax = new Vector2(1, 0);
+        labr.pivot = new Vector2(0.5f, 0);
+        labr.sizeDelta = new Vector2(0, 20); labr.anchoredPosition = Vector2.zero;
+        var labt = labelGO.AddComponent<Text>();
+        labt.text = slotDef.name;
+        labt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        labt.fontSize = 10; labt.color = new Color(0.6f, 0.6f, 0.7f);
+        labt.alignment = TextAnchor.MiddleCenter;
 
-        // ¡ÛÍ‚‡ ÚËÔ‡ ÔÓ ˆÂÌÚÛ
-        GameObject letterGO = new GameObject("Letter");
+        // –ë—É–∫–≤–∞ —Ç–∏–ø–∞
+        var letterGO = new GameObject("Letter");
         letterGO.transform.SetParent(slotGO.transform, false);
-        RectTransform letterRect = letterGO.AddComponent<RectTransform>();
-        letterRect.anchorMin = new Vector2(0, 0.2f);
-        letterRect.anchorMax = new Vector2(1, 1);
-        letterRect.offsetMin = Vector2.zero;
-        letterRect.offsetMax = Vector2.zero;
-        Text letterTxt = letterGO.AddComponent<Text>();
-        letterTxt.text = slotDef.allowedType.Length > 0
-                                ? slotDef.allowedType[0].ToString() : "?";
-        letterTxt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        letterTxt.fontSize = 26;
-        letterTxt.fontStyle = FontStyle.Bold;
-        letterTxt.color = new Color(1f, 1f, 1f, 0.18f);
-        letterTxt.alignment = TextAnchor.MiddleCenter;
+        var letr = letterGO.AddComponent<RectTransform>();
+        letr.anchorMin = new Vector2(0, 0.2f); letr.anchorMax = Vector2.one;
+        letr.offsetMin = letr.offsetMax = Vector2.zero;
+        var lett = letterGO.AddComponent<Text>();
+        lett.text = slotDef.allowedType.Length > 0
+                    ? slotDef.allowedType[0].ToString() : "?";
+        lett.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        lett.fontSize = 26; lett.fontStyle = FontStyle.Bold;
+        lett.color = new Color(1f, 1f, 1f, 0.18f);
+        lett.alignment = TextAnchor.MiddleCenter;
 
-        //‰Ó·‡‚ÎÂÌËÂ ÍÌÓÔÍË ‰Îˇ ‚ÓÁÏÓÊÌÓÒÚË ‚Á‡ËÏÓ‰ÂÈÒÚ‚Ëˇ
         Button btn = slotGO.AddComponent<Button>();
         btn.targetGraphic = bgImage;
         btn.transition = Selectable.Transition.None;
 
-        EventTrigger et = slotGO.AddComponent<EventTrigger>();
+        var et = slotGO.AddComponent<EventTrigger>();
 
+        // ‚îÄ‚îÄ –ù–∞–≤–µ–¥–µ–Ω–∏–µ ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
         var onEnter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-        onEnter.callback.AddListener((_) => {
-            bgImage.color = highlightColor;
-            // œÓÍ‡Á˚‚‡ÂÏ ÚÛÎÚËÔ
+        onEnter.callback.AddListener((_) =>
+        {
+            bgImage.color = new Color(0.30f, 0.30f, 0.36f, 1f);
             Item equipped = inventory?.GetEquippedItem(slotDef.allowedType);
             if (tooltip != null)
             {
                 tooltipText.text = equipped != null
-                    ? $"<b>{equipped.itemName}</b>\n«‡˘ËÚ‡: {equipped.value}\nÀ Ã ó ÒÌˇÚ¸"
-                    : $"<b>{slotDef.name}</b>\n<color=#666666>œÛÒÚÓ</color>";
+                    ? $"<b>{equipped.itemName}</b>\n–ó–∞—â–∏—Ç–∞: {equipped.value}\n" +
+                      "–õ–ö–ú ‚Äî —Å–Ω—è—Ç—å (–µ—Å–ª–∏ –µ—Å—Ç—å –º–µ—Å—Ç–æ)\n–ü–ö–ú ‚Äî –≤—ã–±—Ä–æ—Å–∏—Ç—å"
+                    : $"<b>{slotDef.name}</b>\n<color=#666666>–ü—É—Å—Ç–æ</color>";
                 tooltip.SetActive(true);
             }
         });
         et.triggers.Add(onEnter);
 
+        // ‚îÄ‚îÄ –£—Ö–æ–¥ –º—ã—à–∏ ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
         var onExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        onExit.callback.AddListener((_) => {
+        onExit.callback.AddListener((_) =>
+        {
             bgImage.color = normalColor;
             if (tooltip != null) tooltip.SetActive(false);
         });
         et.triggers.Add(onExit);
 
-        ColorBlock cb = btn.colors;
-        cb.normalColor = new Color(0.2f, 0.2f, 0.24f);
-        cb.highlightedColor = new Color(0.3f, 0.3f, 0.36f);
-        cb.pressedColor = new Color(0.15f, 0.15f, 0.18f);
-        btn.colors = cb;
-
+        // ‚îÄ‚îÄ –õ–ö–ú ‚Äî —Å–Ω—è—Ç—å (–µ—Å–ª–∏ –µ—Å—Ç—å –º–µ—Å—Ç–æ –≤ –∏–Ω–≤–µ–Ω—Ç–∞—Ä–µ) ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
         btn.onClick.AddListener(() =>
         {
-            if (inventory != null)
+            if (inventory == null) return;
+            Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
+            if (equipped != null)
             {
-                Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
-                if (equipped != null)
-                {
-                    inventory.UnequipItem(slotDef.allowedType);
-                    RefreshEquipmentUI();
-                }
-                else
-                {
-                    Debug.Log($"—ÎÓÚ {slotDef.name} ÔÛÒÚ");
-                }
+                inventory.UnequipItem(slotDef.allowedType);
+                RefreshEquipmentUI();
             }
         });
 
-    }
-    //  ‡ÚÍÓ‚ÒÔ˚¯Í‡ ˆ‚ÂÚ‡ ÔË ÍÎËÍÂ, Á‡ÚÂÏ ‚ÓÁ‚‡Ú
-    IEnumerator FlashSlot(Image img, Color flash, Color normal)
-    {
-        img.color = flash;
-        yield return new WaitForSeconds(0.10f);
-        img.color = normal;
+        // ‚îÄ‚îÄ –ü–ö–ú ‚Äî –≤—ã–±—Ä–æ—Å–∏—Ç—å –≤ –º–∏—Ä –¥–∞–∂–µ –µ—Å–ª–∏ –∏–Ω–≤–µ–Ω—Ç–∞—Ä—å –ø–æ–ª–æ–Ω ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ‚îÄ
+        var onRightClick = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick };
+        onRightClick.callback.AddListener((ev) =>
+        {
+            var ped = (PointerEventData)ev;
+            if (ped.button != PointerEventData.InputButton.Right) return;
+            if (inventory == null) return;
+
+            Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
+            if (equipped == null) return;
+
+            // ‚úÖ –°–Ω–∏–º–∞–µ–º –Ω–∞–ø—Ä—è–º—É—é, –º–∏–Ω—É—è –ø—Ä–æ–≤–µ—Ä–∫—É –∏–Ω–≤–µ–Ω—Ç–∞—Ä—è
+            inventory.equippedItems.Remove(slotDef.allowedType);
+
+            if (slotDef.allowedType == "Weapon" && HandController.Instance != null)
+                HandController.Instance.HideWeaponModel();
+
+            // –í—ã–±—Ä–∞—Å—ã–≤–∞–µ–º –≤ –º–∏—Ä
+            Transform player = inventory.transform;
+            Vector3 pos = player.position + player.forward * 1.5f + Vector3.up * 0.5f;
+            var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            drop.transform.position = pos;
+            drop.transform.localScale = Vector3.one * 0.4f;
+            drop.name = equipped.itemName;
+            drop.tag = "Item";
+
+            var rend = drop.GetComponent<Renderer>();
+            if (retroMaterial != null) rend.material = retroMaterial;
+            rend.material.color = equipped.itemType switch
+            {
+                "Potion" => new Color(0.2f, 0.8f, 0.3f),
+                "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+                "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
+                "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
+                _ => new Color(0.6f, 0.6f, 0.6f)
+            };
+
+            var data = drop.AddComponent<ItemData>();
+            data.itemName = equipped.itemName;
+            data.itemType = equipped.itemType;
+            data.value = equipped.value;
+
+            drop.AddComponent<Rigidbody>()
+                .AddForce(player.forward * 3f + Vector3.up * 2f, ForceMode.Impulse);
+
+            if (tooltip != null) tooltip.SetActive(false);
+            RefreshEquipmentUI();
+            InventoryUICode.RefreshIfOpen();
+        });
+        et.triggers.Add(onRightClick);
+
+        // –°–æ—Ö—Ä–∞–Ω—è–µ–º rect –¥–ª—è drag & drop –∏–∑ –∏–Ω–≤–µ–Ω—Ç–∞—Ä—è
+        slotRectList.Add((slotGO.GetComponent<RectTransform>(), slotDef.allowedType));
     }
 
-    public static EquipmentUI Instance { get; private set; }
-    private void Awake()
+    // ‚úÖ –í–æ–∑–≤—Ä–∞—â–∞–µ—Ç —Ç–∏–ø —Å–ª–æ—Ç–∞ –ø–æ–¥ –∫—É—Ä—Å–æ—Ä–æ–º (–¥–ª—è drag –∏–∑ –∏–Ω–≤–µ–Ω—Ç–∞—Ä—è)
+    public string GetSlotTypeUnderMouse()
     {
-        Instance = this;
+        if (!IsOpen) return null;
+        foreach (var (rect, type) in slotRectList)
+        {
+            if (RectTransformUtility.RectangleContainsScreenPoint(
+                    rect, Input.mousePosition, null))
+                return type;
+        }
+        return null;
     }
+
     public static void RefreshIfOpen()
     {
         if (IsOpen && Instance != null)
-        {
             Instance.RefreshEquipmentUI();
-        }
     }
 
     void RefreshEquipmentUI()
@@ -299,69 +336,52 @@ public class EquipmentUI : MonoBehaviour
         if (inventory == null) return;
 
         var equipped = inventory.equippedItems;
+
         foreach (var kvp in slotObjects)
         {
             string slotType = kvp.Key;
             GameObject slot = kvp.Value;
             Item item = equipped.ContainsKey(slotType) ? equipped[slotType] : null;
 
-            Image bg = slot.GetComponent<Image>();
-            bg.color = item != null ? new Color(0.28f, 0.28f, 0.33f) : new Color(0.20f, 0.20f, 0.24f);
+            slot.GetComponent<Image>().color = item != null
+                ? new Color(0.28f, 0.28f, 0.33f)
+                : new Color(0.20f, 0.20f, 0.24f);
 
-            Transform iconTransform = slot.transform.Find("Icon");
-            if (iconTransform == null)
-            {
-                GameObject iconGO = new GameObject("Icon");
-                iconGO.transform.SetParent(slot.transform, false);
-                RectTransform iconRect = iconGO.AddComponent<RectTransform>();
-                iconRect.anchorMin = new Vector2(0.1f, 0.1f);
-                iconRect.anchorMax = new Vector2(0.9f, 0.9f);
-                iconRect.offsetMin = Vector2.zero;
-                iconRect.offsetMax = Vector2.zero;
-                Image iconImg = iconGO.AddComponent<Image>();
-                iconTransform = iconGO.transform;
-            }
+            var iconImg = slot.transform.Find("Icon")?.GetComponent<Image>();
+            var letterTxt = slot.transform.Find("Letter")?.GetComponent<Text>();
 
-            Image iconImage = iconTransform.GetComponent<Image>();
-            Text letterText = iconTransform.Find("Letter")?.GetComponent<Text>();
-            if (iconImage != null)
+            if (iconImg != null)
             {
                 if (item != null)
                 {
-                    // --- ÷‚ÂÚ ‚ Á‡‚ËÒËÏÓÒÚË ÓÚ ÚËÔ‡ ---
-                    Color equipColor;
-                    switch (item.itemType)
+                    iconImg.color = item.itemType switch
                     {
-                        case "Weapon":
-                        case "Shield":
-                            equipColor = new Color(0.82f, 0.22f, 0.22f);
-                            break;
-                        case "Helmet":
-                        case "Chest":
-                        case "Legs":
-                        case "Boots":
-                            equipColor = new Color(0.22f, 0.48f, 0.85f);
-                            break;
-                        case "Ring":
-                        case "Amulet":
-                            equipColor = new Color(75f / 255f, 0f, 130f / 255f);
-                            break;
-                        default:
-                            equipColor = Color.white;
-                            break;
-                    }
-                    iconImage.color = equipColor;
-
-                    if (letterText != null)
+                        "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+                        "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
+                        "Ring" or "Amulet" => new Color(75f / 255f, 0f, 130f / 255f),
+                        _ => Color.white
+                    };
+                    if (letterTxt != null)
                     {
-                        letterText.text = item.itemName.Length > 0 ? item.itemName[0].ToString() : "?";
-                        letterText.gameObject.SetActive(true);
+                        letterTxt.text = item.itemName.Length > 0
+                                          ? item.itemName[0].ToString() : "?";
+                        letterTxt.color = new Color(1f, 1f, 1f, 0.9f);
                     }
                 }
                 else
                 {
-                    iconImage.color = new Color(0.2f, 0.2f, 0.24f, 0.5f);
-                    if (letterText != null) letterText.gameObject.SetActive(false);
+                    iconImg.color = new Color(0, 0, 0, 0);
+                    if (letterTxt != null)
+                    {
+                        foreach (var s in slots)
+                            if (s.allowedType == slotType)
+                            {
+                                letterTxt.text = s.allowedType.Length > 0
+                                                 ? s.allowedType[0].ToString() : "?";
+                                break;
+                            }
+                        letterTxt.color = new Color(1f, 1f, 1f, 0.18f);
+                    }
                 }
             }
         }
@@ -369,12 +389,10 @@ public class EquipmentUI : MonoBehaviour
 
     void Update()
     {
-        // EquipmentUI Update():
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             IsOpen = !IsOpen;
             equipmentPanel.SetActive(IsOpen);
-
             if (IsOpen)
             {
                 RefreshEquipmentUI();
@@ -383,6 +401,7 @@ public class EquipmentUI : MonoBehaviour
             else
             {
                 PlayerMovement.LockCursor();
+                if (tooltip != null) tooltip.SetActive(false);
             }
         }
 
@@ -390,19 +409,20 @@ public class EquipmentUI : MonoBehaviour
         {
             Vector2 mp = Input.mousePosition;
             float ox = 15f, oy = -15f;
-            if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width) ox = -tooltipRect.sizeDelta.x - 5f;
-            if (mp.y + oy - tooltipRect.sizeDelta.y < 0) oy = tooltipRect.sizeDelta.y + 5f;
+            if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width)
+                ox = -tooltipRect.sizeDelta.x - 5f;
+            if (mp.y + oy - tooltipRect.sizeDelta.y < 0)
+                oy = tooltipRect.sizeDelta.y + 5f;
             tooltipRect.position = new Vector3(mp.x + ox, mp.y + oy, 0);
         }
     }
+
     public void SetOpen(bool open)
     {
         if (equipmentPanel == null) return;
         IsOpen = open;
         equipmentPanel.SetActive(open);
-        if (open)
-        {
-            RefreshEquipmentUI(); // ÔË ÓÚÍ˚ÚËË Ó·ÌÓ‚ÎˇÂÏ ÒÓ‰ÂÊËÏÓÂ
-        }
+        if (open) RefreshEquipmentUI();
+        else if (tooltip != null) tooltip.SetActive(false);
     }
 }

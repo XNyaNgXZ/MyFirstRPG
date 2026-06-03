@@ -3,23 +3,43 @@ using System.Collections.Generic;
 
 public class Inventory : MonoBehaviour
 {
-    public List<Item> items = new List<Item>();
+    public const int SLOTS = 25; // 5x5
+
+    // ✅ Фиксированный массив — пустая ячейка = null, индексы не смещаются
+    public Item[] items = new Item[SLOTS];
+
     public Dictionary<string, Item> equippedItems = new Dictionary<string, Item>();
 
     [Header("Звуки надевания")]
-    public AudioClip equipWeaponSound;       // WeaponEquip.ogg
-    public AudioClip equipArmorSound;        // ArmorEquip.ogg
-    public AudioClip equipAccessorySound;    // EquipJewelry.ogg
+    public AudioClip equipWeaponSound;
+    public AudioClip equipArmorSound;
+    public AudioClip equipAccessorySound;
 
     [Header("Звуки снятия")]
-    public AudioClip unequipWeaponSound;     // UnequipWeapon.ogg
-    public AudioClip unequipArmorSound;      // UnequipArmor.ogg
-    public AudioClip unequipAccessorySound;  // UnequipJewelry.ogg
+    public AudioClip unequipWeaponSound;
+    public AudioClip unequipArmorSound;
+    public AudioClip unequipAccessorySound;
 
     [Range(0f, 1f)] public float equipVolume = 0.7f;
 
     private AudioSource audioSource;
 
+    void Awake()
+    {
+        if (items == null || items.Length != SLOTS)
+        {
+            items = new Item[SLOTS];
+        }
+        else
+        {
+            // ✅ Очищаем дефолтные пустые объекты от сериализации Unity
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] != null && string.IsNullOrEmpty(items[i].itemName))
+                    items[i] = null;
+            }
+        }
+    }
     void Start()
     {
         audioSource = GetComponent<AudioSource>();
@@ -27,25 +47,55 @@ public class Inventory : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
     }
 
+    // ✅ Добавляет в первую свободную ячейку
+    public bool AddItem(Item newItem)
+    {
+        for (int i = 0; i < items.Length; i++)
+        {
+            if (items[i] == null)
+            {
+                items[i] = newItem;
+                Debug.Log($"'{newItem.itemName}' добавлен в слот {i}");
+                return true;
+            }
+        }
+        Debug.Log("Инвентарь полон!");
+        return false;
+    }
+
+    // ✅ Убирает предмет из слота (не смещает остальные)
+    public void RemoveItem(int index)
+    {
+        if (index >= 0 && index < items.Length)
+            items[index] = null;
+    }
+
+    // ✅ Берёт предмет из слота и возвращает его
+    public Item TakeItem(int index)
+    {
+        if (index < 0 || index >= items.Length || items[index] == null)
+            return null;
+        Item item = items[index];
+        items[index] = null;
+        return item;
+    }
+
     public void EquipItem(Item item)
     {
         if (item == null) return;
         string type = item.itemType;
-
-        if (!IsEquippableType(type))
-        {
-            Debug.Log($"Нельзя надеть предмет типа {type}");
-            return;
-        }
+        if (!IsEquippableType(type)) return;
 
         if (equippedItems.ContainsKey(type))
             UnequipItem(type);
 
         equippedItems[type] = item;
-        items.Remove(item);
-        Debug.Log($"Надето: {item.itemName} (слот: {type})");
 
-        PlayEquipSound(type, equip: true);
+        // Убираем из инвентаря
+        for (int i = 0; i < items.Length; i++)
+            if (items[i] == item) { items[i] = null; break; }
+
+        PlayEquipSound(type, true);
 
         if (type == "Weapon" && HandController.Instance != null)
             HandController.Instance.ShowWeaponModel();
@@ -58,12 +108,22 @@ public class Inventory : MonoBehaviour
     {
         if (!equippedItems.ContainsKey(type)) return;
 
+        // ✅ Проверяем есть ли свободный слот в инвентаре
+        bool hasSpace = false;
+        for (int i = 0; i < items.Length; i++)
+            if (items[i] == null) { hasSpace = true; break; }
+
+        if (!hasSpace)
+        {
+            Debug.Log("Инвентарь полон — нельзя снять предмет!");
+            return;
+        }
+
         Item item = equippedItems[type];
         equippedItems.Remove(type);
-        items.Add(item);
-        Debug.Log($"Снято: {item.itemName}");
+        AddItem(item);
 
-        PlayEquipSound(type, equip: false);
+        PlayEquipSound(type, false);
 
         if (type == "Weapon" && HandController.Instance != null)
             HandController.Instance.HideWeaponModel();
@@ -75,11 +135,8 @@ public class Inventory : MonoBehaviour
     void PlayEquipSound(string type, bool equip)
     {
         if (audioSource == null) return;
-
         AudioClip clip;
-
         if (equip)
-        {
             clip = type switch
             {
                 "Weapon" => equipWeaponSound,
@@ -87,9 +144,7 @@ public class Inventory : MonoBehaviour
                 "Shield" or "Ring" or "Amulet" => equipAccessorySound,
                 _ => null
             };
-        }
         else
-        {
             clip = type switch
             {
                 "Weapon" => unequipWeaponSound,
@@ -97,66 +152,33 @@ public class Inventory : MonoBehaviour
                 "Shield" or "Ring" or "Amulet" => unequipAccessorySound,
                 _ => null
             };
-        }
-
-        if (clip != null)
-            audioSource.PlayOneShot(clip, equipVolume);
+        if (clip != null) audioSource.PlayOneShot(clip, equipVolume);
     }
 
     public bool IsEquippableType(string type)
-    {
-        return type == "Weapon" || type == "Helmet" || type == "Chest" ||
-               type == "Legs" || type == "Boots" || type == "Shield" ||
-               type == "Ring" || type == "Amulet";
-    }
+        => type is "Weapon" or "Helmet" or "Chest" or "Legs"
+                or "Boots" or "Shield" or "Ring" or "Amulet";
 
     public Item GetEquippedItem(string type)
-        => equippedItems.ContainsKey(type) ? equippedItems[type] : null;
+        => equippedItems.TryGetValue(type, out Item i) ? i : null;
 
     public int GetTotalDefense()
     {
         int total = 0;
-        string[] armorTypes = { "Helmet", "Chest", "Legs", "Boots", "Shield", "Amulet", "Ring" };
-        foreach (string type in armorTypes)
-            if (equippedItems.ContainsKey(type))
-                total += equippedItems[type].value;
+        foreach (string t in new[] { "Helmet", "Chest", "Legs", "Boots", "Amulet", "Ring" })
+            if (equippedItems.ContainsKey(t)) total += equippedItems[t].value;
         return total;
-    }
-
-    public void AddItem(Item newItem)
-    {
-        items.Add(newItem);
-        Debug.Log($"Предмет '{newItem.itemName}' добавлен. Всего: {items.Count}");
-    }
-
-    public void RemoveItem(int index)
-    {
-        if (index >= 0 && index < items.Count)
-            items.RemoveAt(index);
-    }
-
-    public Item TakeItem(int index)
-    {
-        if (index < 0 || index >= items.Count) return null;
-        Item item = items[index];
-        items.RemoveAt(index);
-        return item;
     }
 
     public void UseItem(int index)
     {
-        if (index < 0 || index >= items.Count) return;
+        if (index < 0 || index >= items.Length || items[index] == null) return;
         Item item = items[index];
-        switch (item.itemType)
+        if (item.itemType == "Potion")
         {
-            case "Potion":
-                PlayerHealth ph = GetComponent<PlayerHealth>();
-                if (ph != null) ph.Heal(item.value);
-                RemoveItem(index);
-                break;
-            default:
-                Debug.Log($"Неизвестный тип: {item.itemType}");
-                break;
+            PlayerHealth ph = GetComponent<PlayerHealth>();
+            if (ph != null) ph.Heal(item.value);
+            RemoveItem(index);
         }
     }
 }

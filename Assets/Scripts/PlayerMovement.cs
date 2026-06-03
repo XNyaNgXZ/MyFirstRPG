@@ -28,14 +28,12 @@ public class PlayerMovement : MonoBehaviour
     [Range(0f, 1f)] public float landVolume = 0.7f;
 
     private CharacterController controller;
-    private bool isCrouching = false;
+    public bool IsCrouching { get; private set; } = false;
     private float originalWalkSpeed;
     private Vector3 originalCenter;
     private Camera playerCamera;
     private float verticalRotation = 0f;
     private AudioSource audioSource;
-
-    // Для определения приземления
     private bool wasGrounded = true;
 
     void Start()
@@ -45,8 +43,6 @@ public class PlayerMovement : MonoBehaviour
         originalCenter = controller.center;
         playerCamera = GetComponentInChildren<Camera>();
         audioSource = GetComponent<AudioSource>();
-
-        // Если AudioSource не добавлен вручную — добавим автоматически
         if (audioSource == null)
             audioSource = gameObject.AddComponent<AudioSource>();
 
@@ -57,6 +53,7 @@ public class PlayerMovement : MonoBehaviour
     {
         bool uiOpen = InventoryUICode.IsOpen || EquipmentUI.IsOpen;
 
+        // Вращение камеры
         if (!uiOpen)
         {
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
@@ -71,59 +68,57 @@ public class PlayerMovement : MonoBehaviour
         // Движение
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
-        Vector3 moveDirection = transform.right * horizontal + transform.forward * vertical;
-        if (moveDirection.magnitude > 1f) moveDirection.Normalize();
+        Vector3 moveDir = transform.right * horizontal + transform.forward * vertical;
+        if (moveDir.magnitude > 1f) moveDir.Normalize();
 
+        // Гравитация
         bool isGrounded = controller.isGrounded;
-
-        // ✅ Приземление — определяем момент касания земли
         if (!wasGrounded && isGrounded)
-        {
-            if (landSound != null)
-                audioSource.PlayOneShot(landSound, landVolume);
-        }
+            if (landSound != null) audioSource.PlayOneShot(landSound, landVolume);
         wasGrounded = isGrounded;
 
         if (isGrounded && verticalVelocity.y < 0)
             verticalVelocity.y = -2f;
 
-        // ✅ Прыжок
+        // Прыжок
         if (Input.GetButtonDown("Jump") && isGrounded &&
             Time.time >= lastJumpTime + jumpCooldown && !uiOpen)
         {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             lastJumpTime = Time.time;
-
-            if (jumpSound != null)
-                audioSource.PlayOneShot(jumpSound, jumpVolume);
+            if (jumpSound != null) audioSource.PlayOneShot(jumpSound, jumpVolume);
         }
 
         verticalVelocity.y += gravity * Time.deltaTime;
 
-        Vector3 finalMove = moveDirection * walkSpeed * Time.deltaTime;
+        Vector3 finalMove = moveDir * walkSpeed * Time.deltaTime;
         finalMove.y = verticalVelocity.y * Time.deltaTime;
         controller.Move(finalMove);
 
-        // Приседание
-        bool crouchInput = Input.GetKey(KeyCode.LeftControl);
-        if (crouchInput && !isCrouching)
+        if (Input.GetKeyDown(KeyCode.LeftControl) && !uiOpen)
         {
-            controller.height = crouchHeight;
-            walkSpeed = crouchSpeed;
-            Vector3 c = originalCenter; c.y -= (standHeight - crouchHeight) / 2f;
-            controller.center = c;
-            Vector3 cam = playerCamera.transform.localPosition; cam.y = 0.2f;
-            playerCamera.transform.localPosition = cam;
-            isCrouching = true;
-        }
-        else if (!crouchInput && isCrouching)
-        {
-            controller.height = standHeight;
-            walkSpeed = originalWalkSpeed;
-            controller.center = originalCenter;
-            Vector3 cam = playerCamera.transform.localPosition; cam.y = 0.5f;
-            playerCamera.transform.localPosition = cam;
-            isCrouching = false;
+            IsCrouching = !IsCrouching;  // ← было isCrouching
+
+            if (IsCrouching)             // ← было isCrouching
+            {
+                controller.height = crouchHeight;
+                walkSpeed = crouchSpeed;
+                Vector3 c = originalCenter;
+                c.y -= (standHeight - crouchHeight) / 2f;
+                controller.center = c;
+                Vector3 cam = playerCamera.transform.localPosition;
+                cam.y = 0.2f;
+                playerCamera.transform.localPosition = cam;
+            }
+            else
+            {
+                controller.height = standHeight;
+                walkSpeed = originalWalkSpeed;
+                controller.center = originalCenter;
+                Vector3 cam = playerCamera.transform.localPosition;
+                cam.y = 0.5f;
+                playerCamera.transform.localPosition = cam;
+            }
         }
     }
 
