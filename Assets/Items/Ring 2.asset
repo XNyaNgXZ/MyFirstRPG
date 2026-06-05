@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8fca1110828b964b8d7f1d7b2f8ff6a, type: 3}
+  m_Name: Ring 2
+  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  itemName: Ring 2
+  itemType: Ring
+  itemValue: 1
+  itemColor: {r: 0.3764706, g: 0, b: 0.54901963, a: 1}
+  itemScale: {x: 0.3, y: 0.3, z: 0.3}
+  worldPrefab: {fileID: 0}
+  icon: {fileID: 0}
+  worldTexture: {fileID: 0}

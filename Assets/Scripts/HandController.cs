@@ -7,6 +7,10 @@ public class HandController : MonoBehaviour
     public Transform weaponHolder;
     public Inventory inventory;
 
+    [Header("Дальность атаки")]
+    public float unarmedRange = 2f;
+    public float weaponRange = 2.5f;
+
     [Header("Звуки кулака")]
     public AudioClip punchSwingSound;
     public AudioClip punchHitSound;
@@ -22,10 +26,9 @@ public class HandController : MonoBehaviour
     [Range(0f, 1f)] public float missVolume = 0.4f;
 
     [Header("Блок")]
-    public AudioClip shieldRaiseSound;         // 1 звук поднятия щита (ПКМ)
+    public AudioClip shieldRaiseSound;
     [Range(0f, 1f)] public float shieldVolume = 0.7f;
 
-    // Статический флаг — доступен из PlayerHealth
     public static bool IsBlocking { get; private set; } = false;
 
     private AudioSource audioSource;
@@ -70,7 +73,6 @@ public class HandController : MonoBehaviour
 
         handsAnimator.SetBool("hasWeapon", hasWeapon);
 
-        // ✅ Блок — ПКМ + щит экипирован
         if (hasShield)
         {
             if (Input.GetMouseButtonDown(1) && !IsBlocking)
@@ -87,7 +89,6 @@ public class HandController : MonoBehaviour
             IsBlocking = false;
         }
 
-        // Нельзя атаковать во время блока
         if (IsBlocking) return;
 
         if (Input.GetMouseButtonDown(0) && !isAttacking)
@@ -102,11 +103,14 @@ public class HandController : MonoBehaviour
         pendingDamage = 0;
         pendingHitPoint = Vector3.zero;
 
+        // ✅ Дальность зависит от того есть оружие или нет
+        float range = hasWeapon ? weaponRange : unarmedRange;
+
         Camera cam = GetComponentInChildren<Camera>();
         if (cam != null)
         {
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, 5f))
+            if (Physics.Raycast(ray, out RaycastHit hit, range))
             {
                 pendingHitPoint = hit.point;
                 if (hit.collider.CompareTag("Enemy"))

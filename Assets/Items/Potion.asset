@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8fca1110828b964b8d7f1d7b2f8ff6a, type: 3}
+  m_Name: Potion
+  m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
+  itemName: Potion
+  itemType: Potion
+  itemValue: 25
+  itemColor: {r: 0.28627452, g: 1, b: 0.16470589, a: 1}
+  itemScale: {x: 0.4, y: 0.4, z: 0.4}
+  worldPrefab: {fileID: 0}
+  icon: {fileID: 0}
+  worldTexture: {fileID: 0}

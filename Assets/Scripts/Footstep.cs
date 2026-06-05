@@ -1,39 +1,58 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
 public class Footstep : MonoBehaviour
 {
-
     public AudioSource audioSource;
     public AudioClip footstepSound;
-    public float footstepVolume = 0.3f;
-    public float stepInterval = 0.5f; // Интервал между шагами
+
+    [Header("Р“СЂРѕРјРєРѕСЃС‚СЊ")]
+    public float walkVolume = 0.3f;
+    public float sprintVolume = 0.5f;  // РіСЂРѕРјС‡Рµ РїСЂРё Р±РµРіРµ
+    public float crouchVolume = 0.1f;  // С‚РёС€Рµ РїСЂРё РїСЂРёСЃРµРґР°РЅРёРё
+
+    [Header("РРЅС‚РµСЂРІР°Р» РјРµР¶РґСѓ С€Р°РіР°РјРё")]
+    public float walkInterval = 0.5f;
+    public float sprintInterval = 0.3f; // Р±С‹СЃС‚СЂРµРµ РїСЂРё Р±РµРіРµ
+    public float crouchInterval = 0.8f; // РјРµРґР»РµРЅРЅРµРµ РїСЂРё РїСЂРёСЃРµРґР°РЅРёРё
 
     private float stepTimer = 0f;
     private CharacterController controller;
+    private PlayerMovement playerMovement;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        playerMovement = GetComponent<PlayerMovement>();
         if (audioSource == null)
-        {
             audioSource = GetComponent<AudioSource>();
-        }
     }
 
     void Update()
     {
         bool isGrounded = controller.isGrounded;
-        bool isMoving = (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0);
-        // Дополнительное условие: вертикальная скорость не должна быть положительной (исключаем прыжок)
-
+        bool isMoving = Input.GetAxisRaw("Horizontal") != 0 ||
+                            Input.GetAxisRaw("Vertical") != 0;
         bool isNotJumping = controller.velocity.y <= 0.1f;
 
         if (isGrounded && isMoving && isNotJumping)
         {
+            bool isSprinting = playerMovement != null && playerMovement.isSprinting;
+            bool isCrouching = playerMovement != null && playerMovement.IsCrouching;
+
+            // вњ… Р’С‹Р±РёСЂР°РµРј РёРЅС‚РµСЂРІР°Р» Рё РіСЂРѕРјРєРѕСЃС‚СЊ РїРѕ СЃРѕСЃС‚РѕСЏРЅРёСЋ
+            float interval = isSprinting ? sprintInterval
+                           : isCrouching ? crouchInterval
+                           : walkInterval;
+
+            float volume = isSprinting ? sprintVolume
+                         : isCrouching ? crouchVolume
+                         : walkVolume;
+
             stepTimer -= Time.deltaTime;
             if (stepTimer <= 0f)
             {
-                audioSource.PlayOneShot(footstepSound, footstepVolume);
-                stepTimer = stepInterval;
+                audioSource.PlayOneShot(footstepSound, volume);
+                stepTimer = interval;
             }
         }
         else

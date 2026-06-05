@@ -1,16 +1,22 @@
-// Как отдельный класс а не скрипт
+п»їusing UnityEngine;
 
-[System.Serializable] // Для отображение в инспекторе (необязательная вещь)
+[System.Serializable]
 public class Item
 {
     public string itemName;
-    public string itemType; // potion,sword e.t.c.
-    public int value; // potion - hp / sword - damage e.t.c
+    public string itemType;
+    public int value;
+    public Color itemColor = Color.white;
+    public Texture2D worldTexture; 
 
-    public Item(string name, string type, int val)
+    public Vector3 itemScale = Vector3.one * 0.4f;
+
+    public Item(string name, string type, int val, Color color = default, Vector3 scale = default)
     {
         itemName = name;
         itemType = type;
         value = val;
+        itemColor = color == default ? Color.white : color;
+        itemScale = scale == default ? Vector3.one * 0.4f : scale;
     }
 }

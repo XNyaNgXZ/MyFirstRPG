@@ -2,19 +2,26 @@
 using UnityEngine;
 using System.Collections;
 
+[System.Serializable]
+public class DropEntry
+{
+    public ItemDefinition item;          // карточка предмета
+    [Range(0f, 100f)]
+    public float weight = 50f;  // вес вероятности
+}
+
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyNav : MonoBehaviour
 {
-    enum State { Idle, Chasing, Strafing, Telegraph, Attacking, Charging, Retreating }
+    enum State { Idle, Chasing, Strafing, Telegraph, Attacking, Charging, Searching }
     private State state = State.Idle;
 
     [Header("Material / Drop")]
     public Material dropMaterial;
 
     [Header("Sound")]
-    public AudioClip attackHitSound;  // попадание по игроку (без блока)
-    public AudioClip attackMissSound; // промах
-    public AudioClip chargeSound;     // дэш
+    public AudioClip attackSound;
+    public AudioClip chargeSound;
     public float attackVolume = 0.5f;
 
     [Header("Отталкивание")]
@@ -26,7 +33,6 @@ public class EnemyNav : MonoBehaviour
 
     private Vector3 lastKnownPosition;
     private bool hasLastKnownPosition = false;
-    public float forgetTime = 5f;
     private float timeSinceLastSeen = 0f;
     private bool canSeePlayerNow = false;
 
@@ -53,20 +59,42 @@ public class EnemyNav : MonoBehaviour
     private float strafeDir = 1f;
     private float strafeTimer = 0f;
 
-    [Header("Отступление")]
-    public float retreatHpPercent = 0.3f;
-    public float retreatDistance = 4f;
-
     [Header("Movement")]
     public float moveSpeed = 2f;
     public float detectionRange = 5f;
     private Transform player;
 
+    [Header("Зрение")]
+    public float fieldOfView = 110f;
+    public float peripheralRange = 2f;
+
+    [Header("Слух")]
+    public float hearingRange = 3f;
+    public float hearingRangeSprint = 6f;
+    private PlayerMovement playerMovement;
+
+    [Header("Обнаружение")]
+    public float detectionDelay = 1f;
+    private float detectionTimer = 0f;
+
+    [Header("Поиск после потери игрока")]
+    public float searchDuration = 3f;
+    public float searchTurnSpeed = 60f;
+    private float searchTimer = 0f;
+
+    [Header("Патруль")]
+    public float patrolRadius = 4f;
+    public float patrolWaitMin = 2f;
+    public float patrolWaitMax = 4f;
+    private Vector3 homePosition;
+    private float patrolTimer = 0f;
+    private bool patrolWaiting = false;
+
     [Header("Drop")]
-    public GameObject dropItemPrefab;
-    public string dropItemName = "Health Potion";
-    public string dropItemType = "Potion";
-    public int dropItemValue = 25;
+    public DropEntry[] possibleDrops;
+    [Range(0f, 100f)]
+    public float dropChance = 80f;
+    public float dropFreezeDelay = 1.5f;
 
     private Renderer rend;
     private Color baseColor;
@@ -77,13 +105,14 @@ public class EnemyNav : MonoBehaviour
     void Start()
     {
         currentHealth = maxHealth;
+        homePosition = transform.position;
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
+        playerMovement = player?.GetComponent<PlayerMovement>();
         rend = GetComponent<Renderer>() ?? GetComponentInChildren<Renderer>();
 
         if (rend != null)
             baseColor = rend.material.HasProperty("_Color")
-                ? rend.material.GetColor("_Color")
-                : Color.white;
+                ? rend.material.GetColor("_Color") : Color.white;
 
         originalScale = transform.localScale;
         healthBar = gameObject.AddComponent<EnemyHealthBar>();
@@ -112,13 +141,7 @@ public class EnemyNav : MonoBehaviour
     void SetStateVisual(State newState)
     {
         transform.localScale = originalScale;
-
-        if (telegraphFlash != null)
-        {
-            StopCoroutine(telegraphFlash);
-            telegraphFlash = null;
-        }
-
+        if (telegraphFlash != null) { StopCoroutine(telegraphFlash); telegraphFlash = null; }
         if (rend != null) rend.material.SetColor("_Color", baseColor);
 
         switch (newState)
@@ -126,18 +149,10 @@ public class EnemyNav : MonoBehaviour
             case State.Telegraph:
                 telegraphFlash = StartCoroutine(FlashColor(Color.yellow, 0.15f));
                 break;
-
             case State.Charging:
                 if (rend != null) rend.material.SetColor("_Color", Color.red);
                 transform.localScale = new Vector3(
-                    originalScale.x * 0.8f,
-                    originalScale.y * 0.8f,
-                    originalScale.z * 1.4f);
-                break;
-
-            case State.Retreating:
-                if (rend != null) rend.material.SetColor("_Color",
-                    new Color(0.2f, 0.3f, 0.8f));
+                    originalScale.x * 0.8f, originalScale.y * 0.8f, originalScale.z * 1.4f);
                 break;
         }
     }
@@ -153,69 +168,121 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
-    // ─── Зрение ──────────────────────────────────────────────────────────
+    // ─── Зрение и слух ───────────────────────────────────────────────────
 
     void UpdateVision()
     {
         float distance = Vector3.Distance(transform.position, player.position);
         canSeePlayerNow = false;
 
+        bool isCrouching = playerMovement != null && playerMovement.IsCrouching;
+        bool isSprinting = playerMovement != null && playerMovement.isSprinting;
+        float activeHearingRange = isSprinting ? hearingRangeSprint : hearingRange;
+
+        bool canHear = false;
+        if (!isCrouching && distance <= activeHearingRange)
+        {
+            Vector3 sp = transform.position + Vector3.up * 0.5f;
+            Vector3 pp = player.position + Vector3.up * 0.8f;
+            Vector3 dir = (pp - sp).normalized;
+            if (Physics.Raycast(sp, dir, out RaycastHit hearHit, activeHearingRange))
+                canHear = hearHit.collider.CompareTag("Player");
+        }
+
+        bool canSee = false;
         if (distance <= detectionRange)
         {
-            Vector3 startPoint = transform.position + Vector3.up * 0.5f;
-            CharacterController playerCC = player.GetComponent<CharacterController>();
-            float centerY = playerCC != null ? playerCC.center.y : 0.8f;
-            Vector3 playerCenter = player.position + Vector3.up * centerY;
-            Vector3 dir = (playerCenter - startPoint).normalized;
+            bool inPeripheral = distance <= peripheralRange;
+            Vector3 dirToPlayer = (player.position - transform.position).normalized;
+            float angle = Vector3.Angle(transform.forward, dirToPlayer);
+            bool inFOV = angle <= fieldOfView * 0.5f;
 
-            if (Physics.Raycast(startPoint, dir, out RaycastHit hit, detectionRange))
-                if (hit.collider.CompareTag("Player"))
+            if (inPeripheral || inFOV)
+            {
+                Vector3 sp = transform.position + Vector3.up * 0.5f;
+                var pCC = player.GetComponent<CharacterController>();
+                float centerY = pCC != null ? pCC.center.y : 0.8f;
+                Vector3 pc = player.position + Vector3.up * centerY;
+                Vector3 dir = (pc - sp).normalized;
+                if (Physics.Raycast(sp, dir, out RaycastHit hit, detectionRange))
+                    canSee = hit.collider.CompareTag("Player");
+            }
+        }
+
+        bool detected = canHear || canSee;
+
+        if (detected)
+        {
+            detectionTimer += Time.deltaTime;
+            lastKnownPosition = player.position;
+            hasLastKnownPosition = true;
+            timeSinceLastSeen = 0f;
+
+            if (detectionTimer >= detectionDelay)
+            {
+                canSeePlayerNow = true;
+                if (state == State.Idle || state == State.Searching)
                 {
-                    canSeePlayerNow = true;
-                    lastKnownPosition = player.position;
-                    hasLastKnownPosition = true;
-                    timeSinceLastSeen = 0f;
+                    state = State.Chasing;
+                    SetStateVisual(State.Chasing);
                 }
+            }
+        }
+        else
+        {
+            detectionTimer = Mathf.Max(0f, detectionTimer - Time.deltaTime * 2f);
         }
 
         if (!canSeePlayerNow && hasLastKnownPosition)
         {
             timeSinceLastSeen += Time.deltaTime;
-            if (timeSinceLastSeen >= forgetTime)
+
+            if (timeSinceLastSeen < 5f)
             {
-                hasLastKnownPosition = false;
-                state = State.Idle;
+                lastKnownPosition = player.position;
+                if (state != State.Chasing &&
+                    state != State.Telegraph &&
+                    state != State.Charging)
+                {
+                    state = State.Chasing;
+                    SetStateVisual(State.Chasing);
+                }
+            }
+            else if (state != State.Searching)
+            {
+                state = State.Searching;
+                searchTimer = 0f;
+                agent.isStopped = true;
                 SetStateVisual(State.Idle);
+            }
+
+            if (state == State.Searching)
+            {
+                searchTimer += Time.deltaTime;
+                if (searchTimer >= searchDuration)
+                {
+                    hasLastKnownPosition = false;
+                    detectionTimer = 0f;
+                    state = State.Idle;
+                    SetStateVisual(State.Idle);
+                }
             }
         }
     }
 
-    // ─── Переходы состояний ──────────────────────────────────────────────
+    // ─── Переходы состояний ───────────────────────────────────────────────
 
     void UpdateState()
     {
-        if (state == State.Telegraph || state == State.Charging) return;
+        if (state == State.Telegraph ||
+            state == State.Charging ||
+            state == State.Searching) return;
 
         float distance = Vector3.Distance(transform.position, player.position);
-        float hpPct = (float)currentHealth / maxHealth;
 
         if (!canSeePlayerNow && !hasLastKnownPosition)
         {
-            if (state != State.Idle)
-            {
-                state = State.Idle;
-                SetStateVisual(State.Idle);
-            }
-            return;
-        }
-
-        if (hpPct <= retreatHpPercent && canSeePlayerNow)
-        {
-            if (state != State.Retreating)
-            {
-                state = State.Retreating;
-                SetStateVisual(State.Retreating);
-            }
+            if (state != State.Idle) { state = State.Idle; SetStateVisual(State.Idle); }
             return;
         }
 
@@ -254,32 +321,45 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
-    // ─── Выполнение состояний ────────────────────────────────────────────
-
     void ExecuteState()
     {
-        if (state != State.Strafing)
-            agent.updateRotation = true;
-
         switch (state)
         {
             case State.Idle:
-                agent.isStopped = true;
+                DoPatrol();
                 break;
 
             case State.Chasing:
+                agent.updateRotation = true;
                 agent.speed = moveSpeed;
                 agent.isStopped = false;
-                agent.SetDestination(hasLastKnownPosition
-                    ? lastKnownPosition : player.position);
+                Vector3 dest = canSeePlayerNow ? player.position : lastKnownPosition;
+                agent.SetDestination(dest);
                 break;
 
             case State.Strafing:
                 DoStrafe();
                 break;
 
-            case State.Retreating:
-                DoRetreat();
+            case State.Searching:
+                float distToLast = Vector3.Distance(transform.position, lastKnownPosition);
+                if (distToLast > 1.2f)
+                {
+                    agent.isStopped = false;
+                    agent.speed = moveSpeed * 0.8f;
+                    agent.SetDestination(lastKnownPosition);
+                }
+                else
+                {
+                    agent.isStopped = true;
+                    Vector3 lookDir = player.position - transform.position;
+                    lookDir.y = 0;
+                    if (lookDir != Vector3.zero)
+                        transform.rotation = Quaternion.RotateTowards(
+                            transform.rotation,
+                            Quaternion.LookRotation(lookDir),
+                            searchTurnSpeed * Time.deltaTime);
+                }
                 break;
 
             case State.Telegraph:
@@ -289,18 +369,57 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
+    // ─── Патруль ─────────────────────────────────────────────────────────
+
+    void DoPatrol()
+    {
+        patrolTimer -= Time.deltaTime;
+        if (patrolTimer > 0f) return;
+
+        if (patrolWaiting)
+        {
+            patrolWaiting = false;
+            Vector3 randDir = Random.insideUnitSphere * patrolRadius;
+            randDir.y = 0f;
+            Vector3 target = homePosition + randDir;
+
+            if (NavMesh.SamplePosition(target, out NavMeshHit hit, patrolRadius, -1))
+            {
+                agent.isStopped = false;
+                agent.speed = moveSpeed * 0.5f;
+                agent.SetDestination(hit.position);
+            }
+            patrolTimer = Random.Range(3f, 6f);
+        }
+        else
+        {
+            agent.isStopped = true;
+            patrolWaiting = true;
+            patrolTimer = Random.Range(patrolWaitMin, patrolWaitMax);
+            StartCoroutine(PatrolLook());
+        }
+    }
+
+    IEnumerator PatrolLook()
+    {
+        float dir = Random.value > 0.5f ? 1f : -1f;
+        float elapsed = 0f;
+        float time = Random.Range(1f, 2.5f);
+        while (elapsed < time)
+        {
+            transform.Rotate(0f, dir * searchTurnSpeed * 0.5f * Time.deltaTime, 0f);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
     // ─── Страфинг ────────────────────────────────────────────────────────
 
     void DoStrafe()
     {
         agent.updateRotation = false;
-
         strafeTimer -= Time.deltaTime;
-        if (strafeTimer <= 0f)
-        {
-            strafeDir = -strafeDir;
-            strafeTimer = Random.Range(1.5f, 3f);
-        }
+        if (strafeTimer <= 0f) { strafeDir = -strafeDir; strafeTimer = Random.Range(1.5f, 3f); }
 
         Vector3 toEnemy = (transform.position - player.position).normalized;
         Vector3 strafeVec = Vector3.Cross(toEnemy, Vector3.up) * strafeDir;
@@ -313,169 +432,74 @@ public class EnemyNav : MonoBehaviour
         Vector3 lookDir = player.position - transform.position;
         lookDir.y = 0;
         if (lookDir != Vector3.zero)
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                Quaternion.LookRotation(lookDir),
-                10f * Time.deltaTime);
+            transform.rotation = Quaternion.Slerp(transform.rotation,
+                Quaternion.LookRotation(lookDir), 10f * Time.deltaTime);
     }
 
-    // ─── Отступление ─────────────────────────────────────────────────────
-
-    void DoRetreat()
-    {
-        Vector3 away = (transform.position - player.position).normalized;
-        agent.speed = moveSpeed * 0.8f;
-        agent.isStopped = false;
-        agent.SetDestination(transform.position + away * retreatDistance);
-    }
-
-    // ─── Телеграф + выбор атаки ──────────────────────────────────────────
+    // ─── Атака ───────────────────────────────────────────────────────────
 
     IEnumerator TelegraphThenAttack(bool doCharge)
     {
-        agent.isStopped = true;
-        agent.velocity = Vector3.zero;
-
-        Vector3 dir = player.position - transform.position;
-        dir.y = 0;
-        if (dir != Vector3.zero)
-            transform.rotation = Quaternion.LookRotation(dir);
+        agent.isStopped = true; agent.velocity = Vector3.zero;
+        Vector3 dir = player.position - transform.position; dir.y = 0;
+        if (dir != Vector3.zero) transform.rotation = Quaternion.LookRotation(dir);
 
         if (doCharge)
-        {
             transform.localScale = new Vector3(
-                originalScale.x * 0.85f,
-                originalScale.y * 0.85f,
-                originalScale.z * 1.3f);
+                originalScale.x * 0.85f, originalScale.y * 0.85f, originalScale.z * 1.3f);
 
-            // ✅ Отключаем автоповорот — сами смотрим на игрока
-            agent.updateRotation = false;
+        yield return new WaitForSeconds(0.8f);
 
-            Vector3 backDir = (transform.position - player.position).normalized;
-            Vector3 backTarget = transform.position + backDir * 1.8f;
-            agent.speed = moveSpeed * 1.5f;
-            agent.isStopped = false;
-            agent.SetDestination(backTarget);
-
-            float backElapsed = 0f;
-            while (backElapsed < 0.35f)
-            {
-                // ✅ Постоянно смотрим на игрока пока отходим
-                Vector3 lookDir = player.position - transform.position;
-                lookDir.y = 0;
-                if (lookDir != Vector3.zero)
-                    transform.rotation = Quaternion.LookRotation(lookDir);
-
-                backElapsed += Time.deltaTime;
-                yield return null;
-            }
-
-            agent.isStopped = true;
-            agent.velocity = Vector3.zero;
-            // Возвращаем автоповорот для заряда
-            agent.updateRotation = true;
-
-            yield return new WaitForSeconds(0.25f);
-        }
-        else
-        {
-            yield return new WaitForSeconds(0.8f); // обычный телеграф
-        }
-
-        if (doCharge)
-            yield return StartCoroutine(DoChargeAttack());
-        else
-            DoNormalAttack();
+        if (doCharge) yield return StartCoroutine(DoChargeAttack());
+        else DoNormalAttack();
 
         transform.localScale = originalScale;
         state = State.Strafing;
         SetStateVisual(State.Strafing);
     }
 
-    // ─── Обычная атака ───────────────────────────────────────────────────
-
     void DoNormalAttack()
     {
-        state = State.Attacking;
-        lastAttackTime = Time.time;
-
-        float dist = Vector3.Distance(transform.position, player.position);
-        if (dist <= attackRange)
+        state = State.Attacking; lastAttackTime = Time.time;
+        if (Vector3.Distance(transform.position, player.position) <= attackRange + 0.5f)
         {
             PlayerHealth ph = player.GetComponent<PlayerHealth>();
             if (ph != null)
             {
-                // ✅ Звук только если НЕ блокирует —
-                // при блоке PlayerHealth сам играет свой звук
-                if (!HandController.IsBlocking && attackHitSound != null)
-                    AudioSource.PlayClipAtPoint(attackHitSound,
-                        transform.position, attackVolume);
-
                 ph.TakeDamage(attackDamage, transform);
+                if (attackSound != null)
+                    AudioSource.PlayClipAtPoint(attackSound, transform.position, attackVolume);
             }
-        }
-        else
-        {
-            // Промах
-            if (attackMissSound != null)
-                AudioSource.PlayClipAtPoint(attackMissSound,
-                    transform.position, attackVolume);
         }
     }
 
-    // ─── Заряд-атака ─────────────────────────────────────────────────────
-
     IEnumerator DoChargeAttack()
     {
-        state = State.Charging;
-        lastChargeTime = Time.time;
-        lastAttackTime = Time.time;
+        state = State.Charging; lastChargeTime = Time.time;
         SetStateVisual(State.Charging);
-
-        // ✅ Звук дэша в начале
         if (chargeSound != null)
             AudioSource.PlayClipAtPoint(chargeSound, transform.position, attackVolume);
 
-        agent.speed = chargeSpeed;
-        agent.isStopped = false;
+        agent.speed = chargeSpeed; agent.isStopped = false;
         agent.SetDestination(player.position);
 
-        float elapsed = 0f;
-        bool hit = false;
-
+        float elapsed = 0f; bool hit = false;
         while (elapsed < 0.8f)
         {
             elapsed += Time.deltaTime;
-            float dist = Vector3.Distance(transform.position, player.position);
-            if (!hit && dist <= attackRange)
+            if (!hit && Vector3.Distance(transform.position, player.position) <= attackRange)
             {
                 hit = true;
                 PlayerHealth ph = player.GetComponent<PlayerHealth>();
-                if (ph != null)
-                {
-                    // ✅ Звук только если НЕ блокирует
-                    if (!HandController.IsBlocking && attackHitSound != null)
-                        AudioSource.PlayClipAtPoint(attackHitSound,
-                            transform.position, attackVolume);
-
-                    ph.TakeDamage(chargeDamage, transform);
-                    CameraShake.Instance?.Shake(0.3f, 0.15f);
-                }
+                if (ph != null) { ph.TakeDamage(chargeDamage, transform); CameraShake.Instance?.Shake(0.3f, 0.15f); }
                 break;
             }
             yield return null;
         }
-
-        // Промах дэшем
-        if (!hit && attackMissSound != null)
-            AudioSource.PlayClipAtPoint(attackMissSound,
-                transform.position, attackVolume);
-
-        agent.speed = moveSpeed;
-        agent.isStopped = true;
+        agent.speed = moveSpeed; agent.isStopped = true;
     }
 
-    // ─── Получение урона ─────────────────────────────────────────────────
+    // ─── Урон ────────────────────────────────────────────────────────────
 
     public void TakeDamage(int damage)
     {
@@ -486,12 +510,7 @@ public class EnemyNav : MonoBehaviour
             lastKnownPosition = player.position;
             hasLastKnownPosition = true;
             timeSinceLastSeen = 0f;
-        }
-
-        if (state == State.Retreating)
-        {
-            state = State.Chasing;
-            SetStateVisual(State.Chasing);
+            detectionTimer = detectionDelay;
         }
 
         CameraShake.Instance?.Shake(0.12f, 0.06f);
@@ -517,13 +536,9 @@ public class EnemyNav : MonoBehaviour
     IEnumerator Knockback()
     {
         if (agent == null) yield break;
-        isKnockedBack = true;
-        agent.isStopped = true;
-        agent.velocity = Vector3.zero;
-
+        isKnockedBack = true; agent.isStopped = true; agent.velocity = Vector3.zero;
         Vector3 dir = (transform.position - player.position).normalized;
         float elapsed = 0f;
-
         while (elapsed < knockbackDuration)
         {
             float t = 1f - elapsed / knockbackDuration;
@@ -531,56 +546,131 @@ public class EnemyNav : MonoBehaviour
             elapsed += Time.deltaTime;
             yield return null;
         }
-
-        isKnockedBack = false;
-        agent.isStopped = false;
+        isKnockedBack = false; agent.isStopped = false;
     }
 
-    void Die()
-    {
-        DropItem();
-        Destroy(gameObject);
-    }
+    // ─── Смерть ──────────────────────────────────────────────────────────
+
+    void Die() { DropItem(); Destroy(gameObject); }
+
+    // ─── Дроп с весами ───────────────────────────────────────────────────
 
     void DropItem()
     {
-        GameObject drop = dropItemPrefab != null
-            ? Instantiate(dropItemPrefab,
-                transform.position + Vector3.up * 0.5f, Quaternion.identity)
-            : GameObject.CreatePrimitive(PrimitiveType.Cube);
+        if (possibleDrops == null || possibleDrops.Length == 0) return;
+        if (Random.Range(0f, 100f) > dropChance) return;
 
-        if (dropItemPrefab == null)
+        // Убираем пустые карточки
+        float totalWeight = 0f;
+        foreach (var d in possibleDrops)
+            if (d.item != null) totalWeight += d.weight;
+        if (totalWeight <= 0f) return;
+
+        // Выбираем по весу
+        float roll = Random.Range(0f, totalWeight);
+        float cumulative = 0f;
+        DropEntry chosen = null;
+
+        foreach (var d in possibleDrops)
         {
-            drop.transform.position = transform.position + Vector3.up * 0.5f;
-            drop.transform.localScale = Vector3.one * 0.5f;
+            if (d.item == null) continue;
+            cumulative += d.weight;
+            if (roll <= cumulative) { chosen = d; break; }
         }
+        if (chosen == null || chosen.item == null) return;
 
-        drop.name = dropItemName;
+        // Спавним предмет
+        Vector3 pos = transform.position + Vector3.up * 0.5f;
+        var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        drop.transform.position = pos;
+        drop.transform.localScale = chosen.item.itemScale;
+        drop.name = chosen.item.itemName;
         drop.tag = "Item";
 
-        Renderer dr = drop.GetComponent<Renderer>();
-        if (dr != null)
-        {
-            if (dropMaterial != null) dr.material = dropMaterial;
-            dr.material.color = dropItemType switch
+        Color finalColor = chosen.item.itemColor != Color.white && chosen.item.itemColor != default
+            ? chosen.item.itemColor
+            : chosen.item.itemType switch
             {
-                "Potion" => Color.green,
-                "Weapon" => Color.red,
-                "Helmet" or "Chest" or "Legs" or "Boots" => Color.blue,
-                "Ring" or "Amulet" => new Color(0.5f, 0f, 0.8f),
-                _ => Color.yellow
+                "Potion" => new Color(0.2f, 0.8f, 0.3f),
+                "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+                "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
+                "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
+                _ => new Color(0.6f, 0.6f, 0.6f)
             };
+
+        var r = drop.GetComponent<Renderer>();
+        if (r != null)
+        {
+            if (dropMaterial != null) r.material = new Material(dropMaterial);
+            if (chosen.item.worldTexture != null)
+                r.material.mainTexture = chosen.item.worldTexture;
+            else
+                r.material.color = finalColor;
         }
 
-        ItemData data = drop.AddComponent<ItemData>();
-        data.itemName = dropItemName;
-        data.itemType = dropItemType;
-        data.value = dropItemValue;
+        var data = drop.AddComponent<ItemData>();
+        data.itemName = chosen.item.itemName;
+        data.itemType = chosen.item.itemType;
+        data.value = chosen.item.itemValue;
+        data.itemColor = finalColor;
+        data.itemScale = chosen.item.itemScale;
 
-        drop.AddComponent<Rigidbody>()
-            .AddForce(Random.insideUnitSphere * 2f + Vector3.up * 2f, ForceMode.Impulse);
+        var col = drop.GetComponent<Collider>();
+        if (col == null) col = drop.AddComponent<BoxCollider>();
 
-        if (drop.GetComponent<Collider>() == null)
-            drop.AddComponent<BoxCollider>();
+        var playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null)
+        {
+            var pc = playerObj.GetComponent<Collider>();
+            if (pc != null) Physics.IgnoreCollision(col, pc);
+        }
+        foreach (var enemy in FindObjectsByType<EnemyNav>())
+        {
+            var ec = enemy.GetComponent<Collider>();
+            if (ec != null) Physics.IgnoreCollision(col, ec);
+        }
+
+        var rb = drop.AddComponent<Rigidbody>();
+        rb.AddForce(Vector3.up * 3f + Random.insideUnitSphere * 1.5f, ForceMode.Impulse);
+        var freezer = drop.AddComponent<ItemFreezer>();
+        freezer.delay = dropFreezeDelay;
+    }
+
+    // ─── Alert level для HUD ─────────────────────────────────────────────
+
+    public enum AlertLevel { None, Search, Chase }
+
+    public AlertLevel GetCurrentState()
+    {
+        switch (state)
+        {
+            case State.Chasing:
+            case State.Strafing:
+            case State.Telegraph:
+            case State.Attacking:
+            case State.Charging:
+                return AlertLevel.Chase;
+            case State.Searching:
+                return AlertLevel.Search;
+            default:
+                return AlertLevel.None;
+        }
+    }
+
+    // ─── Гизмос ──────────────────────────────────────────────────────────
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.yellow;
+        Vector3 leftDir = Quaternion.Euler(0, -fieldOfView * 0.5f, 0) * transform.forward;
+        Vector3 rightDir = Quaternion.Euler(0, fieldOfView * 0.5f, 0) * transform.forward;
+        Gizmos.DrawRay(transform.position, leftDir * detectionRange);
+        Gizmos.DrawRay(transform.position, rightDir * detectionRange);
+        Gizmos.DrawWireSphere(transform.position, peripheralRange);
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, detectionRange);
     }
 }
+
+

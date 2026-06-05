@@ -11,7 +11,7 @@ public class PlayerHealth : MonoBehaviour
     [Range(0f, 1f)] public float hurtVolume = 0.8f;
 
     [Header("Звуки блока")]
-    public AudioClip[] blockHitSounds;        // 6 звуков попадания по щиту
+    public AudioClip[] blockHitSounds;
     [Range(0f, 1f)] public float blockHitVolume = 0.8f;
 
     private AudioSource audioSource;
@@ -27,13 +27,26 @@ public class PlayerHealth : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
 
         currentHealth = maxHealth;
-        Debug.Log($"Здоровье: {currentHealth}/{maxHealth}");
+
+        // ✅ Подписываемся на загрузку сцены
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // ✅ Вызывается при каждой загрузке сцены — сбрасываем состояние
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        currentHealth = maxHealth;
+        isDead = false;
     }
 
     public void Heal(int amount)
     {
         currentHealth = Mathf.Min(currentHealth + amount, maxHealth);
-        Debug.Log($"Вылечился на {amount}. Здоровье: {currentHealth}/{maxHealth}");
     }
 
     public void TakeDamage(int damage, Transform attacker = null)
@@ -52,26 +65,16 @@ public class PlayerHealth : MonoBehaviour
                 if (clip != null) audioSource.PlayOneShot(clip, blockHitVolume);
             }
 
-            // Лёгкая тряска при блоке
             CameraShake.Instance?.Shake(0.12f, 0.04f);
 
-            if (remaining <= 0)
-            {
-                Debug.Log("Удар полностью заблокирован!");
-                return;
-            }
-
+            if (remaining <= 0) return;
             damage = remaining;
-            Debug.Log($"Частичный блок. Прошло: {remaining}");
         }
 
-        // Пассивная броня (щит не входит)
         int defense = inventory != null ? inventory.GetTotalDefense() : 0;
         int finalDamage = Mathf.Max(0, damage - defense);
         currentHealth -= finalDamage;
-        Debug.Log($"Получено {finalDamage} урона (броня {defense})");
 
-        // Случайный звук урона
         if (hurtSounds != null && hurtSounds.Length > 0)
         {
             AudioClip clip = hurtSounds[Random.Range(0, hurtSounds.Length)];
@@ -81,7 +84,6 @@ public class PlayerHealth : MonoBehaviour
         ScreenDamageEffect.Instance?.Flash();
         CameraShake.Instance?.Shake(0.2f, 0.08f);
 
-        // Отталкивание
         CharacterController cc = GetComponent<CharacterController>();
         if (attacker != null && cc != null)
             StartCoroutine(ApplyKnockback(cc, attacker));
@@ -89,7 +91,7 @@ public class PlayerHealth : MonoBehaviour
         if (currentHealth <= 0)
         {
             isDead = true;
-            Debug.Log("Вы погибли, сцена перезапустится через 2 секунды");
+            currentHealth = 0;
             Invoke(nameof(RestartGame), 2f);
         }
     }

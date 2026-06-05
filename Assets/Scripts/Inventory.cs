@@ -6,7 +6,8 @@ public class Inventory : MonoBehaviour
     public const int SLOTS = 25; // 5x5
 
     // ✅ Фиксированный массив — пустая ячейка = null, индексы не смещаются
-    public Item[] items = new Item[SLOTS];
+    [System.NonSerialized]
+    public Item[] items;
 
     public Dictionary<string, Item> equippedItems = new Dictionary<string, Item>();
 
@@ -28,11 +29,11 @@ public class Inventory : MonoBehaviour
     {
         if (items == null || items.Length != SLOTS)
         {
-            items = new Item[SLOTS];
+            items = new Item[SLOTS]; // всегда чистый массив
         }
         else
         {
-            // ✅ Очищаем дефолтные пустые объекты от сериализации Unity
+            // Очищаем мусор от сериализации Unity
             for (int i = 0; i < items.Length; i++)
             {
                 if (items[i] != null && string.IsNullOrEmpty(items[i].itemName))
@@ -40,6 +41,7 @@ public class Inventory : MonoBehaviour
             }
         }
     }
+
     void Start()
     {
         audioSource = GetComponent<AudioSource>();

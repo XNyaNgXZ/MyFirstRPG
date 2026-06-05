@@ -14,48 +14,49 @@ public class MouseInteractor : MonoBehaviour
     void Start()
     {
         playerCamera = GetComponentInChildren<Camera>();
-        if (playerCamera == null)
-            Debug.LogError("MouseInteractor: Камера не найдена!");
-
         inventory = GetComponent<Inventory>();
-        if (inventory == null)
-            Debug.LogError("MouseInteractor: На Player нет компонента Inventory!");
     }
 
     void Update()
     {
         if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
+        if (!Input.GetKeyDown(KeyCode.E)) return;
+        if (Time.time < lastPickupTime + pickupCooldown) return;
 
-        // E — подбор предмета
-        if (Input.GetKeyDown(KeyCode.E))
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange)) return;
+
+        ItemData data = hit.collider.GetComponent<ItemData>();
+        if (data == null || inventory == null) return;
+
+        // ✅ Читаем данные через свойства — они сами выберут карточку или ручные данные
+        Color col = data.Color;
+        Vector3 scale = data.Scale;
+
+        // Если цвет не задан — берём с рендерера объекта
+        if (col == Color.white || col == default)
         {
-            // ✅ Кулдаун подбора
-            if (Time.time < lastPickupTime + pickupCooldown) return;
-
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, interactionRange))
-            {
-                ItemData itemData = hit.collider.GetComponent<ItemData>();
-                if (itemData != null && inventory != null)
-                {
-                    Item newItem = new Item(itemData.itemName, itemData.itemType, itemData.value);
-
-                    // ✅ Если инвентарь полон — предмет не берём
-                    bool added = inventory.AddItem(newItem);
-                    if (!added) return;
-
-                    lastPickupTime = Time.time; // ✅ обновляем время подбора
-                    InventoryUICode.RefreshIfOpen();
-
-                    if (pickupSound != null)
-                        AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
-
-                    Destroy(hit.collider.gameObject);
-
-                    if (HandController.Instance != null)
-                        HandController.Instance.PlayPickup();
-                }
-            }
+            var rend = hit.collider.GetComponent<Renderer>();
+            if (rend != null) col = rend.material.color;
         }
+
+        // Читаем текстуру с карточки если есть
+        Texture2D tex = data.definition != null ? data.definition.worldTexture : null;
+
+        Item newItem = new Item(data.Name, data.Type, data.Value, col, scale);
+        newItem.worldTexture = tex; // ✅
+
+        if (!inventory.AddItem(newItem)) return;
+
+        lastPickupTime = Time.time;
+        InventoryUICode.RefreshIfOpen();
+
+        if (pickupSound != null)
+            AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
+
+        Destroy(hit.collider.gameObject);
+
+        if (HandController.Instance != null)
+            HandController.Instance.PlayPickup();
     }
 }

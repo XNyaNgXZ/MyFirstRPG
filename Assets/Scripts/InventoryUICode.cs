@@ -14,6 +14,10 @@ public class InventoryUICode : MonoBehaviour
     public AudioClip dropSound;
     [Range(0f, 1f)] public float dropVolume = 0.4f;
 
+    [Header("Физика дропа")]
+    public float dropFreezeDelay = 1.5f;
+    public float throwForce = 5f;
+
     private Inventory inventory;
     private AudioSource audioSource;
     private GameObject inventoryCanvas;
@@ -63,11 +67,8 @@ public class InventoryUICode : MonoBehaviour
         inventoryPanel.SetActive(false);
     }
 
-    // ─── Построение UI ───────────────────────────────────────────────────
-
     void BuildUI()
     {
-        // Уничтожаем старый canvas если он остался
         if (inventoryCanvas != null) Destroy(inventoryCanvas);
 
         float gridW = COLS * CELL + (COLS - 1) * SPACING;
@@ -76,9 +77,7 @@ public class InventoryUICode : MonoBehaviour
         float panelH = gridH + PAD * 2 + TITLE_H;
 
         inventoryCanvas = new GameObject("InventoryCanvas");
-        // ✅ Canvas переживает перезапуск сцены вместе с Player
         DontDestroyOnLoad(inventoryCanvas);
-
         var cv = inventoryCanvas.AddComponent<Canvas>();
         cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 10;
         var sc = inventoryCanvas.AddComponent<CanvasScaler>();
@@ -90,8 +89,7 @@ public class InventoryUICode : MonoBehaviour
         inventoryPanel.transform.SetParent(inventoryCanvas.transform, false);
         var pr = inventoryPanel.AddComponent<RectTransform>();
         pr.anchorMin = new Vector2(1, 0); pr.anchorMax = new Vector2(1, 0);
-        pr.pivot = new Vector2(1, 0);
-        pr.sizeDelta = new Vector2(panelW, panelH);
+        pr.pivot = new Vector2(1, 0); pr.sizeDelta = new Vector2(panelW, panelH);
         pr.anchoredPosition = new Vector2(-20, 20);
         inventoryPanel.AddComponent<Image>().color = new Color(0.13f, 0.13f, 0.16f, 1f);
 
@@ -106,12 +104,10 @@ public class InventoryUICode : MonoBehaviour
         lr.anchoredPosition = new Vector2(0, -TITLE_H);
         ln.AddComponent<Image>().color = new Color(0.3f, 0.3f, 0.38f, 1f);
 
-        var grid = new GameObject("Grid");
-        grid.transform.SetParent(inventoryPanel.transform, false);
+        var grid = new GameObject("Grid"); grid.transform.SetParent(inventoryPanel.transform, false);
         var gr = grid.AddComponent<RectTransform>();
         gr.anchorMin = new Vector2(0.5f, 0.5f); gr.anchorMax = new Vector2(0.5f, 0.5f);
-        gr.pivot = new Vector2(0.5f, 0.5f);
-        gr.sizeDelta = new Vector2(gridW, gridH);
+        gr.pivot = new Vector2(0.5f, 0.5f); gr.sizeDelta = new Vector2(gridW, gridH);
         gr.anchoredPosition = new Vector2(0, -(TITLE_H / 2));
 
         for (int i = 0; i < SLOTS; i++) CreateSlot(i, grid.transform);
@@ -127,8 +123,7 @@ public class InventoryUICode : MonoBehaviour
         go.transform.SetParent(parent, false);
         var rt = go.AddComponent<RectTransform>();
         rt.anchorMin = new Vector2(0, 1); rt.anchorMax = new Vector2(0, 1);
-        rt.pivot = new Vector2(0, 1);
-        rt.sizeDelta = new Vector2(CELL, CELL);
+        rt.pivot = new Vector2(0, 1); rt.sizeDelta = new Vector2(CELL, CELL);
         rt.anchoredPosition = new Vector2(x, y);
         go.AddComponent<Image>().color = new Color(0.20f, 0.20f, 0.24f, 1f);
 
@@ -154,8 +149,7 @@ public class InventoryUICode : MonoBehaviour
         int ci = index;
         var et = go.AddComponent<EventTrigger>();
 
-        AddEvent(et, EventTriggerType.PointerEnter, _ =>
-        {
+        AddEvent(et, EventTriggerType.PointerEnter, _ => {
             if (isDragging || !Safe(ci)) return;
             var item = inventory.items[ci];
             if (item != null && tooltip != null)
@@ -166,19 +160,14 @@ public class InventoryUICode : MonoBehaviour
             }
         });
 
-        AddEvent(et, EventTriggerType.PointerExit, _ =>
-        {
-            if (tooltip != null) tooltip.SetActive(false);
-        });
+        AddEvent(et, EventTriggerType.PointerExit, _ => { if (tooltip != null) tooltip.SetActive(false); });
 
-        AddEvent(et, EventTriggerType.PointerDown, ev =>
-        {
+        AddEvent(et, EventTriggerType.PointerDown, ev => {
             var ped = (PointerEventData)ev;
             if (ped.button == PointerEventData.InputButton.Left)
             {
                 if (!Safe(ci) || inventory.items[ci] == null) return;
-                pendingIndex = ci;
-                mouseDownPos = Input.mousePosition;
+                pendingIndex = ci; mouseDownPos = Input.mousePosition;
                 if (tooltip != null) tooltip.SetActive(false);
             }
             else if (ped.button == PointerEventData.InputButton.Right)
@@ -187,8 +176,6 @@ public class InventoryUICode : MonoBehaviour
             }
         });
     }
-
-    // ─── Update ──────────────────────────────────────────────────────────
 
     void Update()
     {
@@ -221,22 +208,17 @@ public class InventoryUICode : MonoBehaviour
             float dist = Vector2.Distance(Input.mousePosition, mouseDownPos);
             if (dist > DRAG_THRESHOLD)
             {
-                StartDrag(pendingIndex);
-                pendingIndex = -1;
-                dragStartedThisFrame = true;
+                StartDrag(pendingIndex); pendingIndex = -1; dragStartedThisFrame = true;
             }
             else if (Input.GetMouseButtonUp(0))
             {
-                int idx = pendingIndex;
-                pendingIndex = -1;
-                ClickSlot(idx);
+                int idx = pendingIndex; pendingIndex = -1; ClickSlot(idx);
             }
         }
 
         if (isDragging && !dragStartedThisFrame)
         {
             if (ghostRect != null) ghostRect.position = Input.mousePosition;
-
             if (Input.GetMouseButtonUp(0))
             {
                 int invTarget = GetInvSlotUnderMouse();
@@ -247,17 +229,11 @@ public class InventoryUICode : MonoBehaviour
                 else
                 {
                     string equipType = EquipmentUI.Instance?.GetSlotTypeUnderMouse();
-                    if (equipType != null && draggedItem != null
-                        && draggedItem.itemType == equipType)
+                    if (equipType != null && draggedItem != null && draggedItem.itemType == equipType)
                     {
-                        inventory.EquipItem(draggedItem);
-                        draggedItem = null;
-                        FinishDrag();
+                        inventory.EquipItem(draggedItem); draggedItem = null; FinishDrag();
                     }
-                    else
-                    {
-                        EndDragOutside();
-                    }
+                    else { EndDragOutside(); }
                 }
             }
         }
@@ -267,17 +243,13 @@ public class InventoryUICode : MonoBehaviour
         }
     }
 
-    // ─── Действия ────────────────────────────────────────────────────────
-
     void ClickSlot(int index)
     {
         if (!Safe(index)) return;
         Item item = inventory.items[index];
         if (item == null) return;
-        if (inventory.IsEquippableType(item.itemType))
-            inventory.EquipItem(item);
-        else if (item.itemType == "Potion")
-            inventory.UseItem(index);
+        if (inventory.IsEquippableType(item.itemType)) inventory.EquipItem(item);
+        else if (item.itemType == "Potion") inventory.UseItem(index);
         RefreshSlots();
     }
 
@@ -303,7 +275,7 @@ public class InventoryUICode : MonoBehaviour
         glr.anchorMin = Vector2.zero; glr.anchorMax = Vector2.one;
         glr.offsetMin = glr.offsetMax = Vector2.zero;
         var glt = glGO.AddComponent<Text>();
-        glt.text = draggedItem.itemName.Length > 0 ? draggedItem.itemName[0].ToString() : "?";
+        glt.text = !string.IsNullOrEmpty(draggedItem.itemName) ? draggedItem.itemName[0].ToString() : "?";
         glt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         glt.fontSize = 24; glt.fontStyle = FontStyle.Bold;
         glt.color = Color.white; glt.alignment = TextAnchor.MiddleCenter;
@@ -318,16 +290,14 @@ public class InventoryUICode : MonoBehaviour
         if (!Safe(targetIndex)) { EndDragOutside(); return; }
         Item existing = inventory.items[targetIndex];
         inventory.items[targetIndex] = draggedItem;
-        if (existing != null && Safe(dragFromIndex))
-            inventory.items[dragFromIndex] = existing;
+        if (existing != null && Safe(dragFromIndex)) inventory.items[dragFromIndex] = existing;
         FinishDrag();
     }
 
     void EndDragOutside()
     {
         if (!isDragging || draggedItem == null) return;
-        SpawnItemInWorld(draggedItem);
-        FinishDrag();
+        SpawnItemInWorld(draggedItem); FinishDrag();
     }
 
     void CancelDrag()
@@ -335,15 +305,13 @@ public class InventoryUICode : MonoBehaviour
         if (!isDragging || draggedItem == null) return;
         if (Safe(dragFromIndex) && inventory.items[dragFromIndex] == null)
             inventory.items[dragFromIndex] = draggedItem;
-        else
-            inventory.AddItem(draggedItem);
+        else inventory.AddItem(draggedItem);
         FinishDrag();
     }
 
     void FinishDrag()
     {
-        isDragging = false; draggedItem = null;
-        dragFromIndex = -1; pendingIndex = -1;
+        isDragging = false; draggedItem = null; dragFromIndex = -1; pendingIndex = -1;
         if (dragGhost != null) { Destroy(dragGhost); dragGhost = null; ghostRect = null; }
         RefreshSlots();
     }
@@ -353,6 +321,7 @@ public class InventoryUICode : MonoBehaviour
         if (!Safe(index)) return;
         Item item = inventory.TakeItem(index);
         if (item == null) return;
+        if (tooltip != null) tooltip.SetActive(false);
         SpawnItemInWorld(item);
         RefreshSlots();
     }
@@ -360,86 +329,85 @@ public class InventoryUICode : MonoBehaviour
     void SpawnItemInWorld(Item item)
     {
         if (item == null) return;
-        if (dropSound != null && audioSource != null)
-            audioSource.PlayOneShot(dropSound, dropVolume);
+        if (dropSound != null && audioSource != null) audioSource.PlayOneShot(dropSound, dropVolume);
 
-        Vector3 pos = transform.position + transform.forward * 1.5f + Vector3.up * 0.5f;
+        // ✅ Направление броска = направление камеры (прицела)
+        Camera cam = GetComponentInChildren<Camera>();
+        Vector3 throwDir = cam != null ? cam.transform.forward : transform.forward;
+        Vector3 spawnPos = cam != null
+            ? cam.transform.position + throwDir * 0.5f
+            : transform.position + Vector3.up * 0.5f + throwDir * 0.5f;
+
         var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        drop.transform.position = pos; drop.transform.localScale = Vector3.one * 0.4f;
+        drop.transform.position = spawnPos;
+        drop.transform.localScale = item.itemScale;
         drop.name = item.itemName; drop.tag = "Item";
 
         var rend = drop.GetComponent<Renderer>();
-        if (retroMaterial != null) rend.material = retroMaterial;
-        rend.material.color = GetItemColor(item);
+        if (retroMaterial != null) rend.material = new Material(retroMaterial);
+        if (item.worldTexture != null)
+            rend.material.mainTexture = item.worldTexture;
+        else
+            rend.material.color = GetItemColor(item);
 
         var data = drop.AddComponent<ItemData>();
-        data.itemName = item.itemName; data.itemType = item.itemType; data.value = item.value;
+        data.itemName = item.itemName; data.itemType = item.itemType;
+        data.value = item.value; data.itemColor = item.itemColor;
+        data.itemScale = item.itemScale;
 
-        drop.AddComponent<Rigidbody>()
-            .AddForce(transform.forward * 3f + Vector3.up * 2f, ForceMode.Impulse);
+        var col = drop.GetComponent<Collider>();
+        var playerCol = GetComponent<Collider>();
+        if (col != null && playerCol != null) Physics.IgnoreCollision(col, playerCol);
+
+        foreach (var enemy in FindObjectsByType<EnemyNav>())
+        {
+            var enemyCol = enemy.GetComponent<Collider>();
+            if (enemyCol != null && col != null)
+                Physics.IgnoreCollision(col, enemyCol);
+        }
+
+        // ✅ Бросаем в направлении прицела
+        var rb = drop.AddComponent<Rigidbody>();
+        rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
+
+        var freezer = drop.AddComponent<ItemFreezer>();
+        freezer.delay = dropFreezeDelay;
     }
-
-    // ─── Обновление слотов ───────────────────────────────────────────────
 
     void RefreshSlots()
     {
         if (inventory == null || inventory.items == null) return;
-
         for (int i = 0; i < SLOTS; i++)
         {
             if (!Safe(i)) break;
-
-            var go = slotGOs[i];
-            var ico = slotIcons[i];
-            var let = slotLetters[i];
-
-            // ✅ Проверяем и null и destroyed
+            var go = slotGOs[i]; var ico = slotIcons[i]; var let = slotLetters[i];
             if (go == null || !go) { RebuildUIIfNeeded(); return; }
             if (ico == null || !ico || let == null || !let) continue;
 
             bool ghost = isDragging && i == dragFromIndex;
             Item item = ghost ? null : inventory.items[i];
-            // ✅ Пустой itemName = пустой слот
-            if (item != null && string.IsNullOrEmpty(item.itemName))
-                item = null;
-
-            if (item != null)
+            if (item != null && !string.IsNullOrEmpty(item.itemName))
             {
                 ico.color = GetItemColor(item);
-                // ✅ string.IsNullOrEmpty вместо item.itemName.Length
-                let.text = !string.IsNullOrEmpty(item.itemName)
-                             ? item.itemName[0].ToString() : "?";
+                let.text = item.itemName[0].ToString();
                 let.color = Color.white;
             }
             else
             {
-                ico.color = new Color(0, 0, 0, 0);
-                let.text = "";
+                ico.color = new Color(0, 0, 0, 0); let.text = "";
             }
-
         }
     }
 
-    // ✅ Пересобирает UI если он был уничтожен (перезапуск сцены)
-    void RebuildUIIfNeeded()
-    {
-        BuildUI();
-        inventoryPanel.SetActive(IsOpen);
-    }
-
-    // ─── Вспомогательные ─────────────────────────────────────────────────
-
-    bool Safe(int i) =>
-        inventory != null && inventory.items != null && i >= 0 && i < inventory.items.Length;
+    void RebuildUIIfNeeded() { BuildUI(); inventoryPanel?.SetActive(IsOpen); }
+    bool Safe(int i) => inventory != null && inventory.items != null && i >= 0 && i < inventory.items.Length;
 
     int GetInvSlotUnderMouse()
     {
         for (int i = 0; i < SLOTS; i++)
         {
             if (slotRects[i] == null) continue;
-            if (RectTransformUtility.RectangleContainsScreenPoint(
-                    slotRects[i], Input.mousePosition, null))
-                return i;
+            if (RectTransformUtility.RectangleContainsScreenPoint(slotRects[i], Input.mousePosition, null)) return i;
         }
         return -1;
     }
@@ -447,6 +415,7 @@ public class InventoryUICode : MonoBehaviour
     Color GetItemColor(Item item)
     {
         if (item == null) return Color.gray;
+        if (item.itemColor != Color.white && item.itemColor != default(Color)) return item.itemColor;
         return item.itemType switch
         {
             "Potion" => new Color(0.2f, 0.8f, 0.3f),
@@ -460,8 +429,7 @@ public class InventoryUICode : MonoBehaviour
     void UpdateTooltipPos()
     {
         if (tooltip == null || !tooltip.activeSelf) return;
-        Vector2 mp = Input.mousePosition;
-        float ox = 15f, oy = -15f;
+        Vector2 mp = Input.mousePosition; float ox = 15f, oy = -15f;
         if (mp.x + tooltipRect.sizeDelta.x + ox > Screen.width) ox = -tooltipRect.sizeDelta.x - 5f;
         if (mp.y + oy - tooltipRect.sizeDelta.y < 0) oy = tooltipRect.sizeDelta.y + 5f;
         tooltipRect.position = new Vector3(mp.x + ox, mp.y + oy, 0);
@@ -485,8 +453,7 @@ public class InventoryUICode : MonoBehaviour
         tooltip.SetActive(false);
     }
 
-    void MakeLabel(Transform parent, string text, Vector2 amin, Vector2 amax,
-                   Vector2 piv, Vector2 sz, Vector2 ap, int fs, Color col)
+    void MakeLabel(Transform parent, string text, Vector2 amin, Vector2 amax, Vector2 piv, Vector2 sz, Vector2 ap, int fs, Color col)
     {
         var go = new GameObject("Label"); go.transform.SetParent(parent, false);
         var r = go.AddComponent<RectTransform>();
@@ -499,12 +466,8 @@ public class InventoryUICode : MonoBehaviour
     void AddEvent(EventTrigger et, EventTriggerType type, System.Action<BaseEventData> action)
     {
         var e = new EventTrigger.Entry { eventID = type };
-        e.callback.AddListener(ev => action(ev));
-        et.triggers.Add(e);
+        e.callback.AddListener(ev => action(ev)); et.triggers.Add(e);
     }
 
-    public static void RefreshIfOpen()
-    {
-        if (IsOpen && Instance != null) Instance.RefreshSlots();
-    }
+    public static void RefreshIfOpen() { if (IsOpen && Instance != null) Instance.RefreshSlots(); }
 }
