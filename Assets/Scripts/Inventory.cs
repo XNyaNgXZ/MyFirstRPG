@@ -100,11 +100,15 @@ public class Inventory : MonoBehaviour
         PlayEquipSound(type, true);
 
         if (type == "Weapon" && HandController.Instance != null)
+        {
             HandController.Instance.ShowWeaponModel();
+            HandController.Instance.SetWeaponMode(HandController.WeaponMode.OneHand);
+        }
 
         InventoryUICode.RefreshIfOpen();
         EquipmentUI.RefreshIfOpen();
     }
+
 
     public void UnequipItem(string type)
     {
@@ -128,7 +132,11 @@ public class Inventory : MonoBehaviour
         PlayEquipSound(type, false);
 
         if (type == "Weapon" && HandController.Instance != null)
+        {
             HandController.Instance.HideWeaponModel();
+            HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
+            HandController.Instance.rightHandAnimator?.ResetTrigger("pickup");
+        }
 
         InventoryUICode.RefreshIfOpen();
         EquipmentUI.RefreshIfOpen();

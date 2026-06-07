@@ -68,6 +68,7 @@ public class PlayerMovement : MonoBehaviour
 
     void Start()
     {
+        IsCrouching = false;
         controller = GetComponent<CharacterController>();
         originalWalkSpeed = walkSpeed;
         originalCenter = controller.center;
