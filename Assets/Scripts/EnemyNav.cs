@@ -5,15 +5,15 @@ using System.Collections;
 [System.Serializable]
 public class DropEntry
 {
-    public ItemDefinition item;          // карточка предмета
+    public ItemDefinition item;
     [Range(0f, 100f)]
-    public float weight = 50f;  // вес вероятности
+    public float weight = 50f;
 }
 
 [RequireComponent(typeof(NavMeshAgent))]
 public class EnemyNav : MonoBehaviour
 {
-    enum State { Idle, Chasing, Strafing, Telegraph, Attacking, Charging, Searching }
+    enum State { Idle, Chasing, Strafing, Telegraph, Attacking, Charging, Searching, Retreating }
     private State state = State.Idle;
 
     [Header("Material / Drop")]
@@ -59,6 +59,11 @@ public class EnemyNav : MonoBehaviour
     private float strafeDir = 1f;
     private float strafeTimer = 0f;
 
+    [Header("Отступление после атаки")]
+    public float retreatDistance = 2.5f;
+    public float retreatSpeed = 3f;
+    public float retreatDuration = 1.2f;
+
     [Header("Movement")]
     public float moveSpeed = 2f;
     public float detectionRange = 5f;
@@ -102,12 +107,19 @@ public class EnemyNav : MonoBehaviour
     private Vector3 originalScale;
     private Coroutine telegraphFlash;
 
+    private CharacterController playerCC;
+
+    // ✅ Grace period для зрения
+    private float sightGraceTimer = 0f;
+    private float sightGraceTime = 2f;
+
     void Start()
     {
         currentHealth = maxHealth;
         homePosition = transform.position;
         player = GameObject.FindGameObjectWithTag("Player")?.transform;
         playerMovement = player?.GetComponent<PlayerMovement>();
+        playerCC = player?.GetComponent<CharacterController>();
         rend = GetComponent<Renderer>() ?? GetComponentInChildren<Renderer>();
 
         if (rend != null)
@@ -121,7 +133,7 @@ public class EnemyNav : MonoBehaviour
         if (agent != null)
         {
             agent.speed = moveSpeed;
-            agent.stoppingDistance = 0f;
+            agent.stoppingDistance = strafeRadius * 0.8f;
             agent.updateRotation = true;
         }
 
@@ -136,7 +148,14 @@ public class EnemyNav : MonoBehaviour
         ExecuteState();
     }
 
-    // ─── Визуал состояний ────────────────────────────────────────────────
+    // ✅ Дистанция только по XZ
+    float DistanceToPlayer()
+    {
+        Vector3 a = transform.position;
+        Vector3 b = player.position;
+        a.y = 0; b.y = 0;
+        return Vector3.Distance(a, b);
+    }
 
     void SetStateVisual(State newState)
     {
@@ -168,27 +187,27 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
-    // ─── Зрение и слух ───────────────────────────────────────────────────
-
     void UpdateVision()
     {
-        float distance = Vector3.Distance(transform.position, player.position);
+        float distance = DistanceToPlayer();
         canSeePlayerNow = false;
 
         bool isCrouching = playerMovement != null && playerMovement.IsCrouching;
         bool isSprinting = playerMovement != null && playerMovement.isSprinting;
         float activeHearingRange = isSprinting ? hearingRangeSprint : hearingRange;
 
+        // ─── Слух ────────────────────────────────────────────────────────
         bool canHear = false;
         if (!isCrouching && distance <= activeHearingRange)
         {
             Vector3 sp = transform.position + Vector3.up * 0.5f;
-            Vector3 pp = player.position + Vector3.up * 0.8f;
+            Vector3 pp = player.position + Vector3.up * 0.5f;
             Vector3 dir = (pp - sp).normalized;
             if (Physics.Raycast(sp, dir, out RaycastHit hearHit, activeHearingRange))
                 canHear = hearHit.collider.CompareTag("Player");
         }
 
+        // ─── Зрение ──────────────────────────────────────────────────────
         bool canSee = false;
         if (distance <= detectionRange)
         {
@@ -200,12 +219,30 @@ public class EnemyNav : MonoBehaviour
             if (inPeripheral || inFOV)
             {
                 Vector3 sp = transform.position + Vector3.up * 0.5f;
-                var pCC = player.GetComponent<CharacterController>();
-                float centerY = pCC != null ? pCC.center.y : 0.8f;
-                Vector3 pc = player.position + Vector3.up * centerY;
-                Vector3 dir = (pc - sp).normalized;
+
+                // ✅ Берём реальный центр коллайдера игрока
+                Vector3 ccCenter = playerCC != null
+                    ? player.TransformPoint(playerCC.center)
+                    : player.position + Vector3.up * 0.9f;
+
+                Vector3 dir = (ccCenter - sp).normalized;
                 if (Physics.Raycast(sp, dir, out RaycastHit hit, detectionRange))
-                    canSee = hit.collider.CompareTag("Player");
+                {
+                    if (hit.collider.CompareTag("Player"))
+                        canSee = true;
+                }
+
+                // ✅ Второй луч чуть ниже — для приседания
+                if (!canSee)
+                {
+                    Vector3 lowTarget = player.position + Vector3.up * 0.1f;
+                    Vector3 dir2 = (lowTarget - sp).normalized;
+                    if (Physics.Raycast(sp, dir2, out RaycastHit hit2, detectionRange))
+                    {
+                        if (hit2.collider.CompareTag("Player"))
+                            canSee = true;
+                    }
+                }
             }
         }
 
@@ -213,6 +250,8 @@ public class EnemyNav : MonoBehaviour
 
         if (detected)
         {
+            // ✅ Сбрасываем grace timer при обнаружении
+            sightGraceTimer = sightGraceTime;
             detectionTimer += Time.deltaTime;
             lastKnownPosition = player.position;
             hasLastKnownPosition = true;
@@ -230,7 +269,23 @@ public class EnemyNav : MonoBehaviour
         }
         else
         {
-            detectionTimer = Mathf.Max(0f, detectionTimer - Time.deltaTime * 2f);
+            // ✅ Если игрок совсем рядом — всегда видим
+            if (DistanceToPlayer() <= strafeRadius * 1.5f && hasLastKnownPosition)
+            {
+                canSeePlayerNow = true;
+                lastKnownPosition = player.position;
+                sightGraceTimer = sightGraceTime;
+            }
+            else if (sightGraceTimer > 0f)
+            {
+                sightGraceTimer -= Time.deltaTime;
+                canSeePlayerNow = true;
+                lastKnownPosition = player.position;
+            }
+            else
+            {
+                detectionTimer = Mathf.Max(0f, detectionTimer - Time.deltaTime * 2f);
+            }
         }
 
         if (!canSeePlayerNow && hasLastKnownPosition)
@@ -242,7 +297,8 @@ public class EnemyNav : MonoBehaviour
                 lastKnownPosition = player.position;
                 if (state != State.Chasing &&
                     state != State.Telegraph &&
-                    state != State.Charging)
+                    state != State.Charging &&
+                    state != State.Retreating)
                 {
                     state = State.Chasing;
                     SetStateVisual(State.Chasing);
@@ -270,15 +326,14 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
-    // ─── Переходы состояний ───────────────────────────────────────────────
-
     void UpdateState()
     {
         if (state == State.Telegraph ||
             state == State.Charging ||
-            state == State.Searching) return;
+            state == State.Searching ||
+            state == State.Retreating) return;
 
-        float distance = Vector3.Distance(transform.position, player.position);
+        float distance = DistanceToPlayer();
 
         if (!canSeePlayerNow && !hasLastKnownPosition)
         {
@@ -333,8 +388,8 @@ public class EnemyNav : MonoBehaviour
                 agent.updateRotation = true;
                 agent.speed = moveSpeed;
                 agent.isStopped = false;
-                Vector3 dest = canSeePlayerNow ? player.position : lastKnownPosition;
-                agent.SetDestination(dest);
+                agent.stoppingDistance = strafeRadius * 0.85f;
+                agent.SetDestination(canSeePlayerNow ? player.position : lastKnownPosition);
                 break;
 
             case State.Strafing:
@@ -365,11 +420,10 @@ public class EnemyNav : MonoBehaviour
             case State.Telegraph:
             case State.Charging:
             case State.Attacking:
+            case State.Retreating:
                 break;
         }
     }
-
-    // ─── Патруль ─────────────────────────────────────────────────────────
 
     void DoPatrol()
     {
@@ -413,11 +467,10 @@ public class EnemyNav : MonoBehaviour
         }
     }
 
-    // ─── Страфинг ────────────────────────────────────────────────────────
-
     void DoStrafe()
     {
         agent.updateRotation = false;
+        agent.stoppingDistance = 0f;
         strafeTimer -= Time.deltaTime;
         if (strafeTimer <= 0f) { strafeDir = -strafeDir; strafeTimer = Random.Range(1.5f, 3f); }
 
@@ -436,10 +489,11 @@ public class EnemyNav : MonoBehaviour
                 Quaternion.LookRotation(lookDir), 10f * Time.deltaTime);
     }
 
-    // ─── Атака ───────────────────────────────────────────────────────────
-
     IEnumerator TelegraphThenAttack(bool doCharge)
     {
+        if (!doCharge) lastAttackTime = Time.time;
+        else lastChargeTime = Time.time;
+
         agent.isStopped = true; agent.velocity = Vector3.zero;
         Vector3 dir = player.position - transform.position; dir.y = 0;
         if (dir != Vector3.zero) transform.rotation = Quaternion.LookRotation(dir);
@@ -454,14 +508,13 @@ public class EnemyNav : MonoBehaviour
         else DoNormalAttack();
 
         transform.localScale = originalScale;
-        state = State.Strafing;
-        SetStateVisual(State.Strafing);
+        yield return StartCoroutine(DoRetreat());
     }
 
     void DoNormalAttack()
     {
-        state = State.Attacking; lastAttackTime = Time.time;
-        if (Vector3.Distance(transform.position, player.position) <= attackRange + 0.5f)
+        state = State.Attacking;
+        if (DistanceToPlayer() <= attackRange + 0.5f)
         {
             PlayerHealth ph = player.GetComponent<PlayerHealth>();
             if (ph != null)
@@ -475,31 +528,78 @@ public class EnemyNav : MonoBehaviour
 
     IEnumerator DoChargeAttack()
     {
-        state = State.Charging; lastChargeTime = Time.time;
+        state = State.Charging;
         SetStateVisual(State.Charging);
         if (chargeSound != null)
             AudioSource.PlayClipAtPoint(chargeSound, transform.position, attackVolume);
 
-        agent.speed = chargeSpeed; agent.isStopped = false;
+        agent.speed = chargeSpeed;
+        agent.isStopped = false;
+        agent.stoppingDistance = 0f;
         agent.SetDestination(player.position);
 
         float elapsed = 0f; bool hit = false;
         while (elapsed < 0.8f)
         {
             elapsed += Time.deltaTime;
-            if (!hit && Vector3.Distance(transform.position, player.position) <= attackRange)
+            if (!hit && DistanceToPlayer() <= attackRange)
             {
                 hit = true;
                 PlayerHealth ph = player.GetComponent<PlayerHealth>();
-                if (ph != null) { ph.TakeDamage(chargeDamage, transform); CameraShake.Instance?.Shake(0.3f, 0.15f); }
+                if (ph != null)
+                {
+                    ph.TakeDamage(chargeDamage, transform);
+                    CameraShake.Instance?.Shake(0.3f, 0.15f);
+                }
                 break;
             }
             yield return null;
         }
-        agent.speed = moveSpeed; agent.isStopped = true;
+        agent.speed = moveSpeed;
+        agent.isStopped = true;
     }
 
-    // ─── Урон ────────────────────────────────────────────────────────────
+    IEnumerator DoRetreat()
+    {
+        state = State.Retreating;
+        SetStateVisual(State.Idle);
+
+        agent.isStopped = false;
+        agent.speed = retreatSpeed;
+        agent.stoppingDistance = 0f;
+        agent.updateRotation = false; // ✅ отключаем авторотацию
+
+        float elapsed = 0f;
+        while (elapsed < retreatDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            if (player != null)
+            {
+                Vector3 retreatDir = (transform.position - player.position).normalized;
+                retreatDir.y = 0f;
+                Vector3 retreatTarget = transform.position + retreatDir * retreatDistance;
+
+                if (NavMesh.SamplePosition(retreatTarget, out NavMeshHit hit, retreatDistance, -1))
+                    agent.SetDestination(hit.position);
+
+                // ✅ Всегда смотрим на игрока
+                Vector3 lookDir = player.position - transform.position;
+                lookDir.y = 0;
+                if (lookDir != Vector3.zero)
+                    transform.rotation = Quaternion.Slerp(transform.rotation,
+                        Quaternion.LookRotation(lookDir), 15f * Time.deltaTime);
+            }
+
+            yield return null;
+        }
+
+        agent.speed = moveSpeed;
+        agent.stoppingDistance = strafeRadius * 0.85f;
+        agent.updateRotation = true; // ✅ возвращаем авторотацию
+        state = State.Strafing;
+        SetStateVisual(State.Strafing);
+    }
 
     public void TakeDamage(int damage)
     {
@@ -511,6 +611,7 @@ public class EnemyNav : MonoBehaviour
             hasLastKnownPosition = true;
             timeSinceLastSeen = 0f;
             detectionTimer = detectionDelay;
+            sightGraceTimer = sightGraceTime;
         }
 
         CameraShake.Instance?.Shake(0.12f, 0.06f);
@@ -549,24 +650,18 @@ public class EnemyNav : MonoBehaviour
         isKnockedBack = false; agent.isStopped = false;
     }
 
-    // ─── Смерть ──────────────────────────────────────────────────────────
-
     void Die() { DropItem(); Destroy(gameObject); }
-
-    // ─── Дроп с весами ───────────────────────────────────────────────────
 
     void DropItem()
     {
         if (possibleDrops == null || possibleDrops.Length == 0) return;
         if (Random.Range(0f, 100f) > dropChance) return;
 
-        // Убираем пустые карточки
         float totalWeight = 0f;
         foreach (var d in possibleDrops)
             if (d.item != null) totalWeight += d.weight;
         if (totalWeight <= 0f) return;
 
-        // Выбираем по весу
         float roll = Random.Range(0f, totalWeight);
         float cumulative = 0f;
         DropEntry chosen = null;
@@ -579,7 +674,6 @@ public class EnemyNav : MonoBehaviour
         }
         if (chosen == null || chosen.item == null) return;
 
-        // Спавним предмет
         Vector3 pos = transform.position + Vector3.up * 0.5f;
         var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
         drop.transform.position = pos;
@@ -636,8 +730,6 @@ public class EnemyNav : MonoBehaviour
         freezer.delay = dropFreezeDelay;
     }
 
-    // ─── Alert level для HUD ─────────────────────────────────────────────
-
     public enum AlertLevel { None, Search, Chase }
 
     public AlertLevel GetCurrentState()
@@ -649,6 +741,7 @@ public class EnemyNav : MonoBehaviour
             case State.Telegraph:
             case State.Attacking:
             case State.Charging:
+            case State.Retreating:
                 return AlertLevel.Chase;
             case State.Searching:
                 return AlertLevel.Search;
@@ -656,8 +749,6 @@ public class EnemyNav : MonoBehaviour
                 return AlertLevel.None;
         }
     }
-
-    // ─── Гизмос ──────────────────────────────────────────────────────────
 
     void OnDrawGizmosSelected()
     {
@@ -672,5 +763,3 @@ public class EnemyNav : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, detectionRange);
     }
 }
-
-

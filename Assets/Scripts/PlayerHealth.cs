@@ -28,7 +28,6 @@ public class PlayerHealth : MonoBehaviour
 
         currentHealth = maxHealth;
 
-        // ✅ Подписываемся на загрузку сцены
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
 
@@ -37,7 +36,6 @@ public class PlayerHealth : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    // ✅ Вызывается при каждой загрузке сцены — сбрасываем состояние
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         currentHealth = maxHealth;
@@ -55,20 +53,36 @@ public class PlayerHealth : MonoBehaviour
 
         if (HandController.IsBlocking)
         {
-            Item shield = inventory?.GetEquippedItem("Shield");
-            int blocked = shield != null ? shield.value : 0;
-            int remaining = Mathf.Max(0, damage - blocked);
-
-            if (blockHitSounds != null && blockHitSounds.Length > 0)
+            // ✅ Проверяем что игрок смотрит на атакующего
+            bool facingAttacker = true;
+            if (attacker != null)
             {
-                AudioClip clip = blockHitSounds[Random.Range(0, blockHitSounds.Length)];
-                if (clip != null) audioSource.PlayOneShot(clip, blockHitVolume);
+                Vector3 dirToAttacker = (attacker.position - transform.position).normalized;
+                dirToAttacker.y = 0;
+                Vector3 playerForward = transform.forward;
+                playerForward.y = 0;
+                float angle = Vector3.Angle(playerForward, dirToAttacker);
+                facingAttacker = angle <= 90f;
             }
 
-            CameraShake.Instance?.Shake(0.12f, 0.04f);
+            if (facingAttacker)
+            {
+                Item shield = inventory?.GetEquippedItem("WeaponLeft");
+                int blocked = shield != null ? shield.value : 0;
+                int remaining = Mathf.Max(0, damage - blocked);
 
-            if (remaining <= 0) return;
-            damage = remaining;
+                if (blockHitSounds != null && blockHitSounds.Length > 0)
+                {
+                    AudioClip clip = blockHitSounds[Random.Range(0, blockHitSounds.Length)];
+                    if (clip != null) audioSource.PlayOneShot(clip, blockHitVolume);
+                }
+
+                CameraShake.Instance?.Shake(0.12f, 0.04f);
+                HandController.Instance?.TriggerBlockHit();
+
+                if (remaining <= 0) return;
+                damage = remaining;
+            }
         }
 
         int defense = inventory != null ? inventory.GetTotalDefense() : 0;

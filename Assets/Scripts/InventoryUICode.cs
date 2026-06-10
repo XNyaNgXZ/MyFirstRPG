@@ -154,7 +154,8 @@ public class InventoryUICode : MonoBehaviour
             var item = inventory.items[ci];
             if (item != null && tooltip != null)
             {
-                tooltipText.text = $"<b>{item.itemName}</b>\n{item.itemType}  |  {item.value}\n" +
+                string displayType = !string.IsNullOrEmpty(item.originalType) ? item.originalType : item.itemType;
+                tooltipText.text = $"<b>{item.itemName}</b>\n{displayType}  |  {item.value}\n" +
                     "ЛКМ — надеть/использовать\nЛКМ+drag — переместить\nПКМ — выбросить";
                 tooltip.SetActive(true);
             }
@@ -229,11 +230,26 @@ public class InventoryUICode : MonoBehaviour
                 else
                 {
                     string equipType = EquipmentUI.Instance?.GetSlotTypeUnderMouse();
-                    if (equipType != null && draggedItem != null && draggedItem.itemType == equipType)
+                    if (equipType != null && draggedItem != null)
                     {
-                        inventory.EquipItem(draggedItem); draggedItem = null; FinishDrag();
+                        string origType = draggedItem.originalType ?? draggedItem.itemType;
+                        bool canEquip = origType == equipType ||
+                                       (equipType == "WeaponLeft" && (origType == "Weapon" || origType == "Shield"));
+
+                        if (canEquip)
+                        {
+                            // Меняем тип для надевания в левую руку
+                            if (equipType == "WeaponLeft")
+                                draggedItem.itemType = "WeaponLeft";
+
+                            inventory.EquipItem(draggedItem);
+                            draggedItem = null;
+                            FinishDrag();
+                        }
+                        else
+                            EndDragOutside();
                     }
-                    else { EndDragOutside(); }
+                    else EndDragOutside();
                 }
             }
         }
@@ -243,13 +259,43 @@ public class InventoryUICode : MonoBehaviour
         }
     }
 
+    // Определяем куда надеть предмет при клике
     void ClickSlot(int index)
     {
         if (!Safe(index)) return;
         Item item = inventory.items[index];
         if (item == null) return;
-        if (inventory.IsEquippableType(item.itemType)) inventory.EquipItem(item);
-        else if (item.itemType == "Potion") inventory.UseItem(index);
+
+        string origType = item.originalType ?? item.itemType;
+
+        if (origType == "Shield")
+        {
+            // Щит всегда в левую руку
+            item.itemType = "WeaponLeft";
+            inventory.EquipItem(item);
+        }
+        else if (origType == "Weapon")
+        {
+            bool hasWeapon = inventory.GetEquippedItem("Weapon") != null;
+            bool hasWeaponLeft = inventory.GetEquippedItem("WeaponLeft") != null;
+
+            if (hasWeapon && !hasWeaponLeft)
+            {
+                // Правая занята — надеваем в левую
+                item.itemType = "WeaponLeft";
+                inventory.EquipItem(item);
+            }
+            else
+            {
+                // Надеваем в правую
+                inventory.EquipItem(item);
+            }
+        }
+        else if (inventory.IsEquippableType(origType))
+            inventory.EquipItem(item);
+        else if (origType == "Potion")
+            inventory.UseItem(index);
+
         RefreshSlots();
     }
 
@@ -288,6 +334,9 @@ public class InventoryUICode : MonoBehaviour
     {
         if (!isDragging || draggedItem == null) return;
         if (!Safe(targetIndex)) { EndDragOutside(); return; }
+        // Восстанавливаем оригинальный тип при возврате в инвентарь
+        if (!string.IsNullOrEmpty(draggedItem.originalType))
+            draggedItem.itemType = draggedItem.originalType;
         Item existing = inventory.items[targetIndex];
         inventory.items[targetIndex] = draggedItem;
         if (existing != null && Safe(dragFromIndex)) inventory.items[dragFromIndex] = existing;
@@ -297,12 +346,18 @@ public class InventoryUICode : MonoBehaviour
     void EndDragOutside()
     {
         if (!isDragging || draggedItem == null) return;
+        // Восстанавливаем оригинальный тип при выбросе
+        if (!string.IsNullOrEmpty(draggedItem.originalType))
+            draggedItem.itemType = draggedItem.originalType;
         SpawnItemInWorld(draggedItem); FinishDrag();
     }
 
     void CancelDrag()
     {
         if (!isDragging || draggedItem == null) return;
+        // Восстанавливаем оригинальный тип при отмене
+        if (!string.IsNullOrEmpty(draggedItem.originalType))
+            draggedItem.itemType = draggedItem.originalType;
         if (Safe(dragFromIndex) && inventory.items[dragFromIndex] == null)
             inventory.items[dragFromIndex] = draggedItem;
         else inventory.AddItem(draggedItem);
@@ -322,6 +377,9 @@ public class InventoryUICode : MonoBehaviour
         Item item = inventory.TakeItem(index);
         if (item == null) return;
         if (tooltip != null) tooltip.SetActive(false);
+        // Восстанавливаем оригинальный тип при выбросе
+        if (!string.IsNullOrEmpty(item.originalType))
+            item.itemType = item.originalType;
         SpawnItemInWorld(item);
         RefreshSlots();
     }
@@ -331,7 +389,6 @@ public class InventoryUICode : MonoBehaviour
         if (item == null) return;
         if (dropSound != null && audioSource != null) audioSource.PlayOneShot(dropSound, dropVolume);
 
-        // ✅ Направление броска = направление камеры (прицела)
         Camera cam = GetComponentInChildren<Camera>();
         Vector3 throwDir = cam != null ? cam.transform.forward : transform.forward;
         Vector3 spawnPos = cam != null
@@ -366,7 +423,6 @@ public class InventoryUICode : MonoBehaviour
                 Physics.IgnoreCollision(col, enemyCol);
         }
 
-        // ✅ Бросаем в направлении прицела
         var rb = drop.AddComponent<Rigidbody>();
         rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
 
@@ -416,10 +472,12 @@ public class InventoryUICode : MonoBehaviour
     {
         if (item == null) return Color.gray;
         if (item.itemColor != Color.white && item.itemColor != default(Color)) return item.itemColor;
-        return item.itemType switch
+        string type = item.originalType ?? item.itemType;
+        return type switch
         {
             "Potion" => new Color(0.2f, 0.8f, 0.3f),
-            "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+            "Weapon" or "WeaponLeft" => new Color(0.82f, 0.22f, 0.22f),
+            "Shield" => new Color(0.22f, 0.48f, 0.85f),
             "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
             "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
             _ => new Color(0.6f, 0.6f, 0.6f)

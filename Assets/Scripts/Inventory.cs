@@ -3,9 +3,8 @@ using System.Collections.Generic;
 
 public class Inventory : MonoBehaviour
 {
-    public const int SLOTS = 25; // 5x5
+    public const int SLOTS = 25;
 
-    // ✅ Фиксированный массив — пустая ячейка = null, индексы не смещаются
     [System.NonSerialized]
     public Item[] items;
 
@@ -28,17 +27,12 @@ public class Inventory : MonoBehaviour
     void Awake()
     {
         if (items == null || items.Length != SLOTS)
-        {
-            items = new Item[SLOTS]; // всегда чистый массив
-        }
+            items = new Item[SLOTS];
         else
         {
-            // Очищаем мусор от сериализации Unity
             for (int i = 0; i < items.Length; i++)
-            {
                 if (items[i] != null && string.IsNullOrEmpty(items[i].itemName))
                     items[i] = null;
-            }
         }
     }
 
@@ -49,7 +43,6 @@ public class Inventory : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
     }
 
-    // ✅ Добавляет в первую свободную ячейку
     public bool AddItem(Item newItem)
     {
         for (int i = 0; i < items.Length; i++)
@@ -65,14 +58,12 @@ public class Inventory : MonoBehaviour
         return false;
     }
 
-    // ✅ Убирает предмет из слота (не смещает остальные)
     public void RemoveItem(int index)
     {
         if (index >= 0 && index < items.Length)
             items[index] = null;
     }
 
-    // ✅ Берёт предмет из слота и возвращает его
     public Item TakeItem(int index)
     {
         if (index < 0 || index >= items.Length || items[index] == null)
@@ -80,6 +71,12 @@ public class Inventory : MonoBehaviour
         Item item = items[index];
         items[index] = null;
         return item;
+    }
+
+    bool IsShield(Item item)
+    {
+        if (item == null) return false;
+        return item.itemType == "Shield" || item.originalType == "Shield";
     }
 
     public void EquipItem(Item item)
@@ -93,7 +90,6 @@ public class Inventory : MonoBehaviour
 
         equippedItems[type] = item;
 
-        // Убираем из инвентаря
         for (int i = 0; i < items.Length; i++)
             if (items[i] == item) { items[i] = null; break; }
 
@@ -102,19 +98,52 @@ public class Inventory : MonoBehaviour
         if (type == "Weapon" && HandController.Instance != null)
         {
             HandController.Instance.ShowWeaponModel();
-            HandController.Instance.SetWeaponMode(HandController.WeaponMode.OneHand);
+
+            bool hasWeaponLeft = equippedItems.ContainsKey("WeaponLeft");
+            bool hasShield = hasWeaponLeft && IsShield(equippedItems["WeaponLeft"]);
+
+            if (hasShield)
+            {
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.SwordShield);
+                // ✅ Обновляем аниматор левой руки
+                HandController.Instance.RefreshLeftHandAnimator();
+            }
+            else if (hasWeaponLeft)
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.DualWield);
+            else
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.OneHand);
+        }
+
+        if (type == "WeaponLeft" && HandController.Instance != null)
+        {
+            bool hasWeapon = equippedItems.ContainsKey("Weapon");
+
+            if (IsShield(item))
+            {
+                // ✅ Щит — показываем Shield объект, не меч
+                HandController.Instance.ShowShieldModel();
+                HandController.Instance.SetWeaponMode(
+                    hasWeapon ? HandController.WeaponMode.SwordShield
+                              : HandController.WeaponMode.Unarmed);
+                HandController.Instance.RefreshLeftHandAnimator();
+            }
+            else
+            {
+                HandController.Instance.ShowWeaponModelLeft();
+                HandController.Instance.SetWeaponMode(
+                    hasWeapon ? HandController.WeaponMode.DualWield
+                              : HandController.WeaponMode.OneHandLeft);
+            }
         }
 
         InventoryUICode.RefreshIfOpen();
         EquipmentUI.RefreshIfOpen();
     }
 
-
     public void UnequipItem(string type)
     {
         if (!equippedItems.ContainsKey(type)) return;
 
-        // ✅ Проверяем есть ли свободный слот в инвентаре
         bool hasSpace = false;
         for (int i = 0; i < items.Length; i++)
             if (items[i] == null) { hasSpace = true; break; }
@@ -134,8 +163,36 @@ public class Inventory : MonoBehaviour
         if (type == "Weapon" && HandController.Instance != null)
         {
             HandController.Instance.HideWeaponModel();
-            HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
-            HandController.Instance.rightHandAnimator?.ResetTrigger("pickup");
+            bool hasWeaponLeft = equippedItems.ContainsKey("WeaponLeft");
+            bool hasShield = hasWeaponLeft && IsShield(equippedItems["WeaponLeft"]);
+
+            if (hasShield)
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
+            else
+                HandController.Instance.SetWeaponMode(
+                    hasWeaponLeft ? HandController.WeaponMode.OneHandLeft
+                                  : HandController.WeaponMode.Unarmed);
+
+            HandController.Instance.ResetPickup();
+        }
+
+        if (type == "WeaponLeft" && HandController.Instance != null)
+        {
+            Item leftItem = item;
+            if (!string.IsNullOrEmpty(leftItem.originalType))
+                leftItem.itemType = leftItem.originalType;
+
+            if (IsShield(leftItem))
+                HandController.Instance.HideShieldModel();
+            else
+                HandController.Instance.HideWeaponModelLeft();
+
+            bool hasWeapon = equippedItems.ContainsKey("Weapon");
+            HandController.Instance.SetWeaponMode(
+                hasWeapon ? HandController.WeaponMode.OneHand
+                          : HandController.WeaponMode.Unarmed);
+
+            HandController.Instance.RefreshLeftHandAnimator();
         }
 
         InventoryUICode.RefreshIfOpen();
@@ -149,7 +206,7 @@ public class Inventory : MonoBehaviour
         if (equip)
             clip = type switch
             {
-                "Weapon" => equipWeaponSound,
+                "Weapon" or "WeaponLeft" => equipWeaponSound,
                 "Helmet" or "Chest" or "Legs" or "Boots" => equipArmorSound,
                 "Shield" or "Ring" or "Amulet" => equipAccessorySound,
                 _ => null
@@ -157,7 +214,7 @@ public class Inventory : MonoBehaviour
         else
             clip = type switch
             {
-                "Weapon" => unequipWeaponSound,
+                "Weapon" or "WeaponLeft" => unequipWeaponSound,
                 "Helmet" or "Chest" or "Legs" or "Boots" => unequipArmorSound,
                 "Shield" or "Ring" or "Amulet" => unequipAccessorySound,
                 _ => null
@@ -166,8 +223,8 @@ public class Inventory : MonoBehaviour
     }
 
     public bool IsEquippableType(string type)
-        => type is "Weapon" or "Helmet" or "Chest" or "Legs"
-                or "Boots" or "Shield" or "Ring" or "Amulet";
+        => type is "Weapon" or "WeaponLeft" or "Shield" or "Helmet" or "Chest"
+                or "Legs" or "Boots" or "Ring" or "Amulet";
 
     public Item GetEquippedItem(string type)
         => equippedItems.TryGetValue(type, out Item i) ? i : null;

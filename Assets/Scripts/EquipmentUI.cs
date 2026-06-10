@@ -27,17 +27,17 @@ public class EquipmentUI : MonoBehaviour
     private struct SlotDef { public string name, allowedType; }
 
     private SlotDef[] slots = {
-        new SlotDef{name="Оружие",    allowedType="Weapon" },
-        new SlotDef{name="Шлем",      allowedType="Helmet" },
-        new SlotDef{name="Нагрудник", allowedType="Chest"  },
-        new SlotDef{name="Поножи",    allowedType="Legs"   },
-        new SlotDef{name="Ботинки",   allowedType="Boots"  },
-        new SlotDef{name="Щит",       allowedType="Shield" },
-        new SlotDef{name="Кольцо 1",  allowedType="Ring"   },
-        new SlotDef{name="Кольцо 2",  allowedType="Ring"   },
-        new SlotDef{name="Кольцо 3",  allowedType="Ring"   },
-        new SlotDef{name="Кольцо 4",  allowedType="Ring"   },
-        new SlotDef{name="Амулет",    allowedType="Amulet" },
+        new SlotDef{name="Оружие",      allowedType="Weapon"     },
+        new SlotDef{name="Шлем",        allowedType="Helmet"     },
+        new SlotDef{name="Нагрудник",   allowedType="Chest"      },
+        new SlotDef{name="Поножи",      allowedType="Legs"       },
+        new SlotDef{name="Ботинки",     allowedType="Boots"      },
+        new SlotDef{name="Лев.рука",    allowedType="WeaponLeft" },
+        new SlotDef{name="Кольцо 1",    allowedType="Ring"       },
+        new SlotDef{name="Кольцо 2",    allowedType="Ring"       },
+        new SlotDef{name="Кольцо 3",    allowedType="Ring"       },
+        new SlotDef{name="Кольцо 4",    allowedType="Ring"       },
+        new SlotDef{name="Амулет",      allowedType="Amulet"     },
     };
 
     private int gridColumns = 4;
@@ -195,8 +195,22 @@ public class EquipmentUI : MonoBehaviour
             if (equipped == null) return;
 
             inventory.equippedItems.Remove(slotDef.allowedType);
+
             if (slotDef.allowedType == "Weapon" && HandController.Instance != null)
+            {
                 HandController.Instance.HideWeaponModel();
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
+            }
+            else if (slotDef.allowedType == "WeaponLeft" && HandController.Instance != null)
+            {
+                if (equipped.itemType != "Shield")
+                    HandController.Instance.HideWeaponModelLeft();
+
+                bool hasWeapon = inventory.equippedItems.ContainsKey("Weapon");
+                HandController.Instance.SetWeaponMode(
+                    hasWeapon ? HandController.WeaponMode.OneHand
+                              : HandController.WeaponMode.Unarmed);
+            }
 
             SpawnInWorld(equipped, inventory.transform);
 
@@ -210,7 +224,6 @@ public class EquipmentUI : MonoBehaviour
 
     void SpawnInWorld(Item item, Transform player)
     {
-        // ✅ Берём направление камеры
         Camera cam = player.GetComponentInChildren<Camera>();
         Vector3 throwDir = cam != null ? cam.transform.forward : player.forward;
         Vector3 spawnPos = cam != null
@@ -245,7 +258,6 @@ public class EquipmentUI : MonoBehaviour
                 Physics.IgnoreCollision(col, enemyCol);
         }
 
-        // ✅ Бросаем в направлении прицела
         var rb = drop.AddComponent<Rigidbody>();
         rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
 
@@ -260,7 +272,7 @@ public class EquipmentUI : MonoBehaviour
         return item.itemType switch
         {
             "Potion" => new Color(0.2f, 0.8f, 0.3f),
-            "Weapon" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+            "Weapon" or "WeaponLeft" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
             "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
             "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
             _ => new Color(0.6f, 0.6f, 0.6f)
