@@ -1,21 +1,21 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
-// Повесь на любой предмет в сцене — он упадёт на пол и замрёт
+// РџРѕРІРµСЃСЊ РЅР° Р»СЋР±РѕР№ РїСЂРµРґРјРµС‚ РІ СЃС†РµРЅРµ вЂ” РѕРЅ СѓРїР°РґС‘С‚ РЅР° РїРѕР» Рё Р·Р°РјСЂС‘С‚
 [RequireComponent(typeof(ItemData))]
 public class ItemSettle : MonoBehaviour
 {
-    [Tooltip("Через сколько секунд предмет замрёт после падения")]
+    [Tooltip("Р§РµСЂРµР· СЃРєРѕР»СЊРєРѕ СЃРµРєСѓРЅРґ РїСЂРµРґРјРµС‚ Р·Р°РјСЂС‘С‚ РїРѕСЃР»Рµ РїР°РґРµРЅРёСЏ")]
     public float settleDelay = 1.5f;
 
     void Start()
     {
-        // Добавляем Rigidbody если нет — предмет упадёт на пол
+        // Р”РѕР±Р°РІР»СЏРµРј Rigidbody РµСЃР»Рё РЅРµС‚ вЂ” РїСЂРµРґРјРµС‚ СѓРїР°РґС‘С‚ РЅР° РїРѕР»
         var rb = GetComponent<Rigidbody>();
         if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
 
         rb.isKinematic = false;
 
-        // Игрок не врезается в предмет
+        // РРіСЂРѕРє РЅРµ РІСЂРµР·Р°РµС‚СЃСЏ РІ РїСЂРµРґРјРµС‚
         var col = GetComponent<Collider>();
         var playerObj = GameObject.FindWithTag("Player");
         if (col != null && playerObj != null)
@@ -25,7 +25,7 @@ public class ItemSettle : MonoBehaviour
                 Physics.IgnoreCollision(col, playerCol);
         }
 
-        // Через settleDelay замораживаем
+        // Р§РµСЂРµР· settleDelay Р·Р°РјРѕСЂР°Р¶РёРІР°РµРј
         Invoke(nameof(Freeze), settleDelay);
     }
 
@@ -33,8 +33,8 @@ public class ItemSettle : MonoBehaviour
     {
         var rb = GetComponent<Rigidbody>();
         if (rb == null) return;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
+        rb.linearVelocity = Vector3.zero;      // в†ђ СЃРЅР°С‡Р°Р»Р° РѕР±РЅСѓР»СЏРµРј
+        rb.angularVelocity = Vector3.zero;     // в†ђ РїРѕС‚РѕРј
+        rb.isKinematic = true;                 // в†ђ РїРѕС‚РѕРј РєРёРЅРµРјР°С‚РёРє
     }
 }

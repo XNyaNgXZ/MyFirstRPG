@@ -45,6 +45,25 @@ public class Inventory : MonoBehaviour
 
     public bool AddItem(Item newItem)
     {
+        // ✅ Стакаемые предметы — ищем существующий стак
+        if (newItem.maxQuantity > 1)
+        {
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i] != null &&
+                    items[i].itemName == newItem.itemName &&
+                    items[i].quantity < items[i].maxQuantity)
+                {
+                    items[i].quantity = Mathf.Min(
+                        items[i].quantity + newItem.quantity,
+                        items[i].maxQuantity);
+                    Debug.Log($"'{newItem.itemName}' добавлен в стак, итого: {items[i].quantity}");
+                    return true;
+                }
+            }
+        }
+
+        // Обычное добавление в пустой слот
         for (int i = 0; i < items.Length; i++)
         {
             if (items[i] == null)
@@ -73,10 +92,27 @@ public class Inventory : MonoBehaviour
         return item;
     }
 
-    bool IsShield(Item item)
+    public bool IsShield(Item item)
     {
         if (item == null) return false;
         return item.itemType == "Shield" || item.originalType == "Shield";
+    }
+
+    public bool IsTwoHanded(Item item)
+    {
+        if (item == null) return false;
+        return item.itemType == "TwoHand" || item.originalType == "TwoHand";
+    }
+
+    public bool IsBow(Item item)
+    {
+        if (item == null) return false;
+        return item.itemType == "Bow" || item.originalType == "Bow";
+    }
+
+    bool IsTwoHandedOrBow(Item item)
+    {
+        return IsTwoHanded(item) || IsBow(item);
     }
 
     public void EquipItem(Item item)
@@ -84,6 +120,63 @@ public class Inventory : MonoBehaviour
         if (item == null) return;
         string type = item.itemType;
         if (!IsEquippableType(type)) return;
+
+        if (type == "Bow")
+        {
+            if (equippedItems.ContainsKey("Weapon"))
+                ForceUnequip("Weapon");
+            if (equippedItems.ContainsKey("WeaponLeft"))
+                ForceUnequip("WeaponLeft");
+
+            equippedItems["Weapon"] = item;
+
+            for (int i = 0; i < items.Length; i++)
+                if (items[i] == item) { items[i] = null; break; }
+
+            PlayEquipSound("Weapon", true);
+
+            if (HandController.Instance != null)
+            {
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.Bow);
+                HandController.Instance.ShowTwoHandModel();
+            }
+
+            InventoryUICode.RefreshIfOpen();
+            EquipmentUI.RefreshIfOpen();
+            return;
+        }
+
+        if (type == "TwoHand")
+        {
+            if (equippedItems.ContainsKey("Weapon"))
+                ForceUnequip("Weapon");
+            if (equippedItems.ContainsKey("WeaponLeft"))
+                ForceUnequip("WeaponLeft");
+
+            equippedItems["Weapon"] = item;
+
+            for (int i = 0; i < items.Length; i++)
+                if (items[i] == item) { items[i] = null; break; }
+
+            PlayEquipSound("Weapon", true);
+
+            if (HandController.Instance != null)
+            {
+                HandController.Instance.SetWeaponMode(HandController.WeaponMode.TwoHand);
+                HandController.Instance.ShowTwoHandModel();
+            }
+
+            InventoryUICode.RefreshIfOpen();
+            EquipmentUI.RefreshIfOpen();
+            return;
+        }
+
+        if ((type == "Weapon" || type == "WeaponLeft") &&
+            equippedItems.ContainsKey("Weapon") &&
+            IsTwoHandedOrBow(equippedItems["Weapon"]))
+        {
+            ForceUnequip("Weapon");
+        }
 
         if (equippedItems.ContainsKey(type))
             UnequipItem(type);
@@ -105,7 +198,6 @@ public class Inventory : MonoBehaviour
             if (hasShield)
             {
                 HandController.Instance.SetWeaponMode(HandController.WeaponMode.SwordShield);
-                // ✅ Обновляем аниматор левой руки
                 HandController.Instance.RefreshLeftHandAnimator();
             }
             else if (hasWeaponLeft)
@@ -120,7 +212,6 @@ public class Inventory : MonoBehaviour
 
             if (IsShield(item))
             {
-                // ✅ Щит — показываем Shield объект, не меч
                 HandController.Instance.ShowShieldModel();
                 HandController.Instance.SetWeaponMode(
                     hasWeapon ? HandController.WeaponMode.SwordShield
@@ -138,6 +229,37 @@ public class Inventory : MonoBehaviour
 
         InventoryUICode.RefreshIfOpen();
         EquipmentUI.RefreshIfOpen();
+    }
+
+    void ForceUnequip(string type)
+    {
+        if (!equippedItems.ContainsKey(type)) return;
+        Item item = equippedItems[type];
+        equippedItems.Remove(type);
+        AddItem(item);
+
+        if (!string.IsNullOrEmpty(item.originalType))
+            item.itemType = item.originalType;
+
+        PlayEquipSound(type, false);
+
+        if (HandController.Instance != null)
+        {
+            if (type == "Weapon")
+            {
+                if (IsTwoHandedOrBow(item))
+                    HandController.Instance.HideTwoHandModel();
+                else
+                    HandController.Instance.HideWeaponModel();
+            }
+            else if (type == "WeaponLeft")
+            {
+                if (IsShield(item))
+                    HandController.Instance.HideShieldModel();
+                else
+                    HandController.Instance.HideWeaponModelLeft();
+            }
+        }
     }
 
     public void UnequipItem(string type)
@@ -158,31 +280,28 @@ public class Inventory : MonoBehaviour
         equippedItems.Remove(type);
         AddItem(item);
 
+        if (!string.IsNullOrEmpty(item.originalType))
+            item.itemType = item.originalType;
+
         PlayEquipSound(type, false);
 
         if (type == "Weapon" && HandController.Instance != null)
         {
-            HandController.Instance.HideWeaponModel();
-            bool hasWeaponLeft = equippedItems.ContainsKey("WeaponLeft");
-            bool hasShield = hasWeaponLeft && IsShield(equippedItems["WeaponLeft"]);
-
-            if (hasShield)
-                HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
+            if (IsTwoHandedOrBow(item))
+                HandController.Instance.HideTwoHandModel();
             else
-                HandController.Instance.SetWeaponMode(
-                    hasWeaponLeft ? HandController.WeaponMode.OneHandLeft
-                                  : HandController.WeaponMode.Unarmed);
+                HandController.Instance.HideWeaponModel();
 
+            bool hasWeaponLeft = equippedItems.ContainsKey("WeaponLeft");
+            HandController.Instance.SetWeaponMode(
+                hasWeaponLeft ? HandController.WeaponMode.OneHandLeft
+                              : HandController.WeaponMode.Unarmed);
             HandController.Instance.ResetPickup();
         }
 
         if (type == "WeaponLeft" && HandController.Instance != null)
         {
-            Item leftItem = item;
-            if (!string.IsNullOrEmpty(leftItem.originalType))
-                leftItem.itemType = leftItem.originalType;
-
-            if (IsShield(leftItem))
+            if (IsShield(item))
                 HandController.Instance.HideShieldModel();
             else
                 HandController.Instance.HideWeaponModelLeft();
@@ -206,7 +325,7 @@ public class Inventory : MonoBehaviour
         if (equip)
             clip = type switch
             {
-                "Weapon" or "WeaponLeft" => equipWeaponSound,
+                "Weapon" or "WeaponLeft" or "TwoHand" or "Bow" => equipWeaponSound,
                 "Helmet" or "Chest" or "Legs" or "Boots" => equipArmorSound,
                 "Shield" or "Ring" or "Amulet" => equipAccessorySound,
                 _ => null
@@ -214,7 +333,7 @@ public class Inventory : MonoBehaviour
         else
             clip = type switch
             {
-                "Weapon" or "WeaponLeft" => unequipWeaponSound,
+                "Weapon" or "WeaponLeft" or "TwoHand" or "Bow" => unequipWeaponSound,
                 "Helmet" or "Chest" or "Legs" or "Boots" => unequipArmorSound,
                 "Shield" or "Ring" or "Amulet" => unequipAccessorySound,
                 _ => null
@@ -224,7 +343,7 @@ public class Inventory : MonoBehaviour
 
     public bool IsEquippableType(string type)
         => type is "Weapon" or "WeaponLeft" or "Shield" or "Helmet" or "Chest"
-                or "Legs" or "Boots" or "Ring" or "Amulet";
+                or "Legs" or "Boots" or "Ring" or "Amulet" or "TwoHand" or "Bow";
 
     public Item GetEquippedItem(string type)
         => equippedItems.TryGetValue(type, out Item i) ? i : null;
@@ -245,7 +364,9 @@ public class Inventory : MonoBehaviour
         {
             PlayerHealth ph = GetComponent<PlayerHealth>();
             if (ph != null) ph.Heal(item.value);
-            RemoveItem(index);
+            item.quantity--;
+            if (item.quantity <= 0)
+                RemoveItem(index);
         }
     }
 }

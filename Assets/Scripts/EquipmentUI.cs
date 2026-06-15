@@ -86,7 +86,7 @@ public class EquipmentUI : MonoBehaviour
         tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
         tr.pivot = new Vector2(0.5f, 1); tr.sizeDelta = new Vector2(0, titleH); tr.anchoredPosition = Vector2.zero;
         var tt = titleGO.AddComponent<Text>();
-        tt.text = "СНАРЯЖЕНИЕ  [I]"; tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tt.text = "СНАРЯЖЕНИЕ  [TAB]"; tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         tt.fontSize = 18; tt.color = new Color(0.65f, 0.65f, 0.75f); tt.alignment = TextAnchor.MiddleCenter;
 
         var lineGO = new GameObject("Line"); lineGO.transform.SetParent(equipmentPanel.transform, false);
@@ -125,9 +125,23 @@ public class EquipmentUI : MonoBehaviour
         tooltip.SetActive(false);
     }
 
+    // ✅ Слот заблокирован если в правой руке двуручное или лук
+    public bool IsSlotBlocked(string slotType)
+    {
+        if (slotType == "WeaponLeft" && inventory != null)
+        {
+            Item rightItem = inventory.GetEquippedItem("Weapon");
+            return rightItem != null &&
+                   (inventory.IsTwoHanded(rightItem) || inventory.IsBow(rightItem));
+        }
+        return false;
+    }
+
     void CreateSlot(int idx, SlotDef slotDef)
     {
         Color normalColor = new Color(0.20f, 0.20f, 0.24f, 1f);
+        Color blockedColor = new Color(0.12f, 0.12f, 0.14f, 1f);
+
         var slotGO = new GameObject($"Slot_{slotDef.name}");
         slotGO.transform.SetParent(slotsContainer, false);
         slotObjects[slotDef.allowedType] = slotGO;
@@ -164,6 +178,7 @@ public class EquipmentUI : MonoBehaviour
 
         var onEnter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
         onEnter.callback.AddListener(_ => {
+            if (IsSlotBlocked(slotDef.allowedType)) return;
             bgImage.color = new Color(0.30f, 0.30f, 0.36f, 1f);
             Item equipped = inventory?.GetEquippedItem(slotDef.allowedType);
             if (tooltip != null)
@@ -177,10 +192,14 @@ public class EquipmentUI : MonoBehaviour
         et.triggers.Add(onEnter);
 
         var onExit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-        onExit.callback.AddListener(_ => { bgImage.color = normalColor; if (tooltip != null) tooltip.SetActive(false); });
+        onExit.callback.AddListener(_ => {
+            bgImage.color = IsSlotBlocked(slotDef.allowedType) ? blockedColor : normalColor;
+            if (tooltip != null) tooltip.SetActive(false);
+        });
         et.triggers.Add(onExit);
 
         btn.onClick.AddListener(() => {
+            if (IsSlotBlocked(slotDef.allowedType)) return;
             if (inventory == null) return;
             Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
             if (equipped != null) { inventory.UnequipItem(slotDef.allowedType); RefreshEquipmentUI(); }
@@ -190,30 +209,39 @@ public class EquipmentUI : MonoBehaviour
         onRightClick.callback.AddListener(ev => {
             var ped = (PointerEventData)ev;
             if (ped.button != PointerEventData.InputButton.Right) return;
+            if (IsSlotBlocked(slotDef.allowedType)) return;
             if (inventory == null) return;
             Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
             if (equipped == null) return;
 
             inventory.equippedItems.Remove(slotDef.allowedType);
 
-            if (slotDef.allowedType == "Weapon" && HandController.Instance != null)
+            if (HandController.Instance != null)
             {
-                HandController.Instance.HideWeaponModel();
-                HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
-            }
-            else if (slotDef.allowedType == "WeaponLeft" && HandController.Instance != null)
-            {
-                if (equipped.itemType != "Shield")
-                    HandController.Instance.HideWeaponModelLeft();
+                if (slotDef.allowedType == "Weapon")
+                {
+                    if (inventory.IsTwoHanded(equipped) || inventory.IsBow(equipped))
+                        HandController.Instance.HideTwoHandModel();
+                    else
+                        HandController.Instance.HideWeaponModel();
+                    HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
+                    HandController.Instance.ResetPickup();
+                }
+                else if (slotDef.allowedType == "WeaponLeft")
+                {
+                    if (inventory.IsShield(equipped))
+                        HandController.Instance.HideShieldModel();
+                    else
+                        HandController.Instance.HideWeaponModelLeft();
 
-                bool hasWeapon = inventory.equippedItems.ContainsKey("Weapon");
-                HandController.Instance.SetWeaponMode(
-                    hasWeapon ? HandController.WeaponMode.OneHand
-                              : HandController.WeaponMode.Unarmed);
+                    bool hasWeapon = inventory.equippedItems.ContainsKey("Weapon");
+                    HandController.Instance.SetWeaponMode(
+                        hasWeapon ? HandController.WeaponMode.OneHand
+                                  : HandController.WeaponMode.Unarmed);
+                }
             }
 
             SpawnInWorld(equipped, inventory.transform);
-
             if (tooltip != null) tooltip.SetActive(false);
             RefreshEquipmentUI(); InventoryUICode.RefreshIfOpen();
         });
@@ -269,10 +297,11 @@ public class EquipmentUI : MonoBehaviour
     {
         if (item == null) return Color.gray;
         if (item.itemColor != Color.white && item.itemColor != default(Color)) return item.itemColor;
-        return item.itemType switch
+        string type = item.originalType ?? item.itemType;
+        return type switch
         {
             "Potion" => new Color(0.2f, 0.8f, 0.3f),
-            "Weapon" or "WeaponLeft" or "Shield" => new Color(0.82f, 0.22f, 0.22f),
+            "Weapon" or "WeaponLeft" or "Shield" or "TwoHand" or "Bow" => new Color(0.82f, 0.22f, 0.22f),
             "Helmet" or "Chest" or "Legs" or "Boots" => new Color(0.22f, 0.48f, 0.85f),
             "Ring" or "Amulet" => new Color(0.45f, 0f, 0.7f),
             _ => new Color(0.6f, 0.6f, 0.6f)
@@ -299,14 +328,31 @@ public class EquipmentUI : MonoBehaviour
         {
             string slotType = kvp.Key; GameObject slot = kvp.Value;
             Item item = equipped.ContainsKey(slotType) ? equipped[slotType] : null;
-            slot.GetComponent<Image>().color = item != null ? new Color(0.28f, 0.28f, 0.33f) : new Color(0.20f, 0.20f, 0.24f);
+
+            bool blocked = IsSlotBlocked(slotType);
+
+            if (blocked)
+                slot.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.14f, 1f);
+            else
+                slot.GetComponent<Image>().color = item != null
+                    ? new Color(0.28f, 0.28f, 0.33f)
+                    : new Color(0.20f, 0.20f, 0.24f);
 
             var iconImg = slot.transform.Find("Icon")?.GetComponent<Image>();
             var letterTxt = slot.transform.Find("Letter")?.GetComponent<Text>();
 
             if (iconImg != null)
             {
-                if (item != null)
+                if (blocked)
+                {
+                    iconImg.color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+                    if (letterTxt != null)
+                    {
+                        letterTxt.text = "✕";
+                        letterTxt.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+                    }
+                }
+                else if (item != null)
                 {
                     iconImg.color = GetItemColor(item);
                     if (letterTxt != null)

@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d8fca1110828b964b8d7f1d7b2f8ff6a, type: 3}
-  m_Name: Axe
+  m_Name: Bow
   m_EditorClassIdentifier: Assembly-CSharp::ItemDefinition
-  itemName: Axe
-  itemType: TwoHand
-  itemValue: 15
-  itemColor: {r: 1, g: 0.15686275, b: 0.15686275, a: 1}
-  itemScale: {x: 0.3, y: 1.5, z: 0.2}
+  itemName: Bow
+  itemType: Bow
+  itemValue: 10
+  itemColor: {r: 1, g: 1, b: 1, a: 1}
+  itemScale: {x: 0.4, y: 0.4, z: 0.4}
   worldPrefab: {fileID: 0}
   icon: {fileID: 0}
   worldTexture: {fileID: 0}

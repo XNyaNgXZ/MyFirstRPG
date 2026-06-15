@@ -23,31 +23,8 @@ public class PlayerHUD : MonoBehaviour
     public float staminaBarWidth = 200f;
     public float staminaBarHeight = 14f;
 
-    [Header("Charge Bar Правая (ЛКМ)")]
-    public float chargeRightOffsetX = 10f;
-    public float chargeRightOffsetY = 80f;
-    public float chargeRightWidth = 160f;
-    public float chargeRightHeight = 10f;
-    public Color chargeRightColor = new Color(0.3f, 0.7f, 1f);
-    public Color chargeRightFullColor = new Color(1f, 0.85f, 0.1f);
-    public Color chargeRightBgColor = new Color(0.02f, 0.05f, 0.10f, 0.8f);
-
-    [Header("Charge Bar Левая (ПКМ)")]
-    public float chargeLeftOffsetX = 10f;
-    public float chargeLeftOffsetY = 80f;
-    public float chargeLeftWidth = 160f;
-    public float chargeLeftHeight = 10f;
-    public Color chargeLeftColor = new Color(1f, 0.4f, 0.3f);
-    public Color chargeLeftFullColor = new Color(1f, 0.85f, 0.1f);
-    public Color chargeLeftBgColor = new Color(0.10f, 0.02f, 0.02f, 0.8f);
-
-    [Header("Charge Bar — скорость")]
-    public float chargeFadeInSpeed = 8f;
-    public float chargeFadeOutSpeed = 4f;
-
     [Header("Иконки оружия")]
     public float weaponIconSize = 64f;
-    public float weaponIconSpacing = 12f;
     public Color weaponIconBgColor = new Color(0.1f, 0.1f, 0.12f, 0.9f);
     public Color weaponIconBorderColor = new Color(0.4f, 0.4f, 0.5f, 0.8f);
     public Color weaponIconEmptyColor = new Color(0.15f, 0.15f, 0.18f, 0.0f);
@@ -55,7 +32,6 @@ public class PlayerHUD : MonoBehaviour
     public Color weaponIconShieldColor = new Color(0.22f, 0.48f, 0.85f, 1f);
     public int weaponLetterFontSize = 22;
     public int weaponLabelFontSize = 10;
-
     public float rightIconOffsetX = 30f;
     public float rightIconOffsetY = 30f;
     public float leftIconOffsetX = 30f;
@@ -78,14 +54,6 @@ public class PlayerHUD : MonoBehaviour
     private RectTransform hpFill;
     private RectTransform staminaFill;
     private CanvasGroup staminaGroup;
-
-    private RectTransform chargeFillRight;
-    private Image chargeFillImageRight;
-    private CanvasGroup chargeGroupRight;
-
-    private RectTransform chargeFillLeft;
-    private Image chargeFillImageLeft;
-    private CanvasGroup chargeGroupLeft;
 
     private Image weaponIconRight;
     private Image weaponIconLeft;
@@ -147,7 +115,6 @@ public class PlayerHUD : MonoBehaviour
         var sc = hudCanvas.AddComponent<CanvasScaler>();
         sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         sc.referenceResolution = new Vector2(1920, 1080);
-        // ✅ Баланс между шириной и высотой — UI не смещается при любом разрешении
         sc.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         sc.matchWidthOrHeight = 0.5f;
 
@@ -183,93 +150,13 @@ public class PlayerHUD : MonoBehaviour
             staminaBarWidth, staminaBarHeight, staminaBgColor, staminaColor,
             out staminaFill, out _);
 
-        // Charge bars
-        BuildChargeBar(true);
-        BuildChargeBar(false);
-
         // Weapon icons
         BuildWeaponIcons();
     }
 
-    void BuildChargeBar(bool isRight)
-    {
-        float offsetX = isRight ? chargeRightOffsetX : chargeLeftOffsetX;
-        float offsetY = isRight ? chargeRightOffsetY : chargeLeftOffsetY;
-        float width = isRight ? chargeRightWidth : chargeLeftWidth;
-        float height = isRight ? chargeRightHeight : chargeLeftHeight;
-        Color bgColor = isRight ? chargeRightBgColor : chargeLeftBgColor;
-        Color fillColor = isRight ? chargeRightColor : chargeLeftColor;
-        string side = isRight ? "Right" : "Left";
-
-        // ✅ Корневой объект с якорем по центру снизу
-        GameObject root = new GameObject($"ChargeRoot{side}");
-        root.transform.SetParent(hudCanvas.transform, false);
-        var rootRT = root.AddComponent<RectTransform>();
-        rootRT.anchorMin = rootRT.anchorMax = new Vector2(0.5f, 0f);
-        rootRT.pivot = new Vector2(0.5f, 0f);
-        rootRT.anchoredPosition = Vector2.zero;
-        rootRT.sizeDelta = Vector2.zero;
-
-        CanvasGroup cg = root.AddComponent<CanvasGroup>();
-        cg.alpha = 0f;
-        if (isRight) chargeGroupRight = cg;
-        else chargeGroupLeft = cg;
-
-        // Фон
-        GameObject bg = new GameObject($"{side}Bg");
-        bg.transform.SetParent(root.transform, false);
-        RectTransform bgRT = bg.AddComponent<RectTransform>();
-        bgRT.anchorMin = bgRT.anchorMax = new Vector2(0.5f, 0f);
-        bgRT.sizeDelta = new Vector2(width, height);
-
-        if (isRight)
-        {
-            bgRT.pivot = new Vector2(0f, 0f);
-            bgRT.anchoredPosition = new Vector2(offsetX, offsetY);
-        }
-        else
-        {
-            bgRT.pivot = new Vector2(1f, 0f);
-            bgRT.anchoredPosition = new Vector2(-offsetX, offsetY);
-        }
-        bg.AddComponent<Image>().color = bgColor;
-
-        // Заливка
-        GameObject fill = new GameObject($"{side}Fill");
-        fill.transform.SetParent(root.transform, false);
-        RectTransform fillRT = fill.AddComponent<RectTransform>();
-        fillRT.anchorMin = fillRT.anchorMax = new Vector2(0.5f, 0f);
-        fillRT.sizeDelta = new Vector2(0, height);
-
-        if (isRight)
-        {
-            fillRT.pivot = new Vector2(0f, 0f);
-            fillRT.anchoredPosition = new Vector2(offsetX, offsetY);
-        }
-        else
-        {
-            fillRT.pivot = new Vector2(1f, 0f);
-            fillRT.anchoredPosition = new Vector2(-offsetX, offsetY);
-        }
-
-        Image fillImg = fill.AddComponent<Image>();
-        fillImg.color = fillColor;
-
-        if (isRight) { chargeFillRight = fillRT; chargeFillImageRight = fillImg; }
-        else { chargeFillLeft = fillRT; chargeFillImageLeft = fillImg; }
-
-        // Лейбл
-        string labelText = isRight ? "ЛКМ" : "ПКМ";
-        float labelX = isRight ? offsetX + width * 0.5f : -offsetX - width * 0.5f;
-        AddText(root.transform, labelText, 9,
-            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
-            new Vector2(labelX, offsetY + height + 2f),
-            new Vector2(width, 14f));
-    }
-
     void BuildWeaponIcons()
     {
-        // Правая рука (справа внизу)
+        // Правая рука
         GameObject rightRoot = new GameObject("WeaponIconRight");
         rightRoot.transform.SetParent(hudCanvas.transform, false);
         RectTransform rightRT = rightRoot.AddComponent<RectTransform>();
@@ -312,7 +199,7 @@ public class PlayerHUD : MonoBehaviour
             new Vector2(0, -weaponLabelFontSize - 2),
             new Vector2(0, weaponLabelFontSize + 2));
 
-        // Левая рука (слева внизу)
+        // Левая рука
         GameObject leftRoot = new GameObject("WeaponIconLeft");
         leftRoot.transform.SetParent(hudCanvas.transform, false);
         RectTransform leftRT = leftRoot.AddComponent<RectTransform>();
@@ -360,8 +247,6 @@ public class PlayerHUD : MonoBehaviour
     {
         UpdateHP();
         UpdateStamina();
-        UpdateChargeRight();
-        UpdateChargeLeft();
         UpdateWeaponIcons();
         UpdateAlert();
 
@@ -389,30 +274,6 @@ public class PlayerHUD : MonoBehaviour
         bool shouldShow = playerMovement.isSprinting || !isFull;
         if (hideTimer > 0f) { hideTimer -= Time.deltaTime; shouldShow = true; }
         staminaGroup.alpha = Mathf.MoveTowards(staminaGroup.alpha, shouldShow ? 1f : 0f, Time.deltaTime * 4f);
-    }
-
-    void UpdateChargeRight()
-    {
-        if (handController == null || chargeFillRight == null || chargeGroupRight == null) return;
-        float pct = handController.ChargePercent;
-        bool shouldShow = handController.IsChargeVisible;
-        chargeFillRight.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, chargeRightWidth * pct);
-        if (chargeFillImageRight != null)
-            chargeFillImageRight.color = Color.Lerp(chargeRightColor, chargeRightFullColor, pct);
-        float speed = shouldShow ? chargeFadeInSpeed : chargeFadeOutSpeed;
-        chargeGroupRight.alpha = Mathf.MoveTowards(chargeGroupRight.alpha, shouldShow ? 1f : 0f, Time.deltaTime * speed);
-    }
-
-    void UpdateChargeLeft()
-    {
-        if (handController == null || chargeFillLeft == null || chargeGroupLeft == null) return;
-        float pct = handController.ChargePercentLeft;
-        bool shouldShow = pct > 0.01f;
-        chargeFillLeft.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, chargeLeftWidth * pct);
-        if (chargeFillImageLeft != null)
-            chargeFillImageLeft.color = Color.Lerp(chargeLeftColor, chargeLeftFullColor, pct);
-        float speed = shouldShow ? chargeFadeInSpeed : chargeFadeOutSpeed;
-        chargeGroupLeft.alpha = Mathf.MoveTowards(chargeGroupLeft.alpha, shouldShow ? 1f : 0f, Time.deltaTime * speed);
     }
 
     void UpdateWeaponIcons()

@@ -69,9 +69,8 @@ public class HeadBob : MonoBehaviour
         // ✅ Импакт приземления
         if (!wasGrounded && isGrounded)
         {
-            // Чем быстрее падали — тем сильнее удар
-            float fallSpeed = Mathf.Abs(controller.velocity.y);
-            landingVelocity = -Mathf.Clamp(fallSpeed * 0.04f, 0.05f, landingDipAmount);
+            // ✅ Фиксируем скорость падения до приземления
+            landingVelocity = -landingDipAmount;
         }
         wasGrounded = isGrounded;
 

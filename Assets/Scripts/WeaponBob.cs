@@ -1,27 +1,27 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
 public class WeaponBob : MonoBehaviour
 {
-    [Header("Настройки покачивания")]
-    public float walkBobSpeed = 8f;      // Скорость покачивания при ходьбе
-    public float walkBobAmountX = 0.05f; // Амплитуда покачивания по горизонтали при ходьбе
-    public float walkBobAmountY = 0.07f; // Амплитуда покачивания по вертикали при ходьбе
+    [Header("РќР°СЃС‚СЂРѕР№РєРё РїРѕРєР°С‡РёРІР°РЅРёСЏ")]
+    public float walkBobSpeed = 8f;      // РЎРєРѕСЂРѕСЃС‚СЊ РїРѕРєР°С‡РёРІР°РЅРёСЏ РїСЂРё С…РѕРґСЊР±Рµ
+    public float walkBobAmountX = 0.05f; // РђРјРїР»РёС‚СѓРґР° РїРѕРєР°С‡РёРІР°РЅРёСЏ РїРѕ РіРѕСЂРёР·РѕРЅС‚Р°Р»Рё РїСЂРё С…РѕРґСЊР±Рµ
+    public float walkBobAmountY = 0.07f; // РђРјРїР»РёС‚СѓРґР° РїРѕРєР°С‡РёРІР°РЅРёСЏ РїРѕ РІРµСЂС‚РёРєР°Р»Рё РїСЂРё С…РѕРґСЊР±Рµ
 
-    public float sprintBobSpeed = 12f;    // Скорость покачивания при беге
+    public float sprintBobSpeed = 12f;    // РЎРєРѕСЂРѕСЃС‚СЊ РїРѕРєР°С‡РёРІР°РЅРёСЏ РїСЂРё Р±РµРіРµ
     public float sprintBobAmountX = 0.08f;
     public float sprintBobAmountY = 0.12f;
 
-    public float crouchBobSpeed = 5f;     // Скорость покачивания при приседании
+    public float crouchBobSpeed = 5f;     // РЎРєРѕСЂРѕСЃС‚СЊ РїРѕРєР°С‡РёРІР°РЅРёСЏ РїСЂРё РїСЂРёСЃРµРґР°РЅРёРё
     public float crouchBobAmountX = 0.03f;
     public float crouchBobAmountY = 0.04f;
 
-    [Header("Плавность")]
-    public float returnSpeed = 8f;        // Скорость возврата в исходное положение
+    [Header("РџР»Р°РІРЅРѕСЃС‚СЊ")]
+    public float returnSpeed = 8f;        // РЎРєРѕСЂРѕСЃС‚СЊ РІРѕР·РІСЂР°С‚Р° РІ РёСЃС…РѕРґРЅРѕРµ РїРѕР»РѕР¶РµРЅРёРµ
 
     private Vector3 initialPosition;
     private float timer = 0f;
     private CharacterController controller;
-    private PlayerMovement playerMovement; // Обратитесь к вашему скрипту PlayerMovement
+    private PlayerMovement playerMovement; // РћР±СЂР°С‚РёС‚РµСЃСЊ Рє РІР°С€РµРјСѓ СЃРєСЂРёРїС‚Сѓ PlayerMovement
 
     void Start()
     {
@@ -37,7 +37,7 @@ public class WeaponBob : MonoBehaviour
         bool isMoving = Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0;
         bool isGrounded = controller.isGrounded;
 
-        // Прерываем эффект, если персонаж не на земле или не двигается
+        // РџСЂРµСЂС‹РІР°РµРј СЌС„С„РµРєС‚, РµСЃР»Рё РїРµСЂСЃРѕРЅР°Р¶ РЅРµ РЅР° Р·РµРјР»Рµ РёР»Рё РЅРµ РґРІРёРіР°РµС‚СЃСЏ
         if (!isGrounded || !isMoving)
         {
             timer = 0f;
@@ -45,7 +45,7 @@ public class WeaponBob : MonoBehaviour
             return;
         }
 
-        // Определяем параметры покачивания в зависимости от состояния (бег/присед/ходьба)
+        // РћРїСЂРµРґРµР»СЏРµРј РїР°СЂР°РјРµС‚СЂС‹ РїРѕРєР°С‡РёРІР°РЅРёСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ СЃРѕСЃС‚РѕСЏРЅРёСЏ (Р±РµРі/РїСЂРёСЃРµРґ/С…РѕРґСЊР±Р°)
         float speed = walkBobSpeed;
         float amountX = walkBobAmountX;
         float amountY = walkBobAmountY;
@@ -66,17 +66,17 @@ public class WeaponBob : MonoBehaviour
             }
         }
 
-        // Увеличиваем таймер, создавая волну
+        // РЈРІРµР»РёС‡РёРІР°РµРј С‚Р°Р№РјРµСЂ, СЃРѕР·РґР°РІР°СЏ РІРѕР»РЅСѓ
         timer += Time.deltaTime * speed;
 
-        // Рассчитываем целевое смещение
+        // Р Р°СЃСЃС‡РёС‚С‹РІР°РµРј С†РµР»РµРІРѕРµ СЃРјРµС‰РµРЅРёРµ
         Vector3 targetPosition = initialPosition + new Vector3(
             Mathf.Sin(timer) * amountX,
             Mathf.Abs(Mathf.Sin(timer)) * amountY,
             0f
         );
 
-        // Плавно перемещаем оружие к целевой позиции
+        // РџР»Р°РІРЅРѕ РїРµСЂРµРјРµС‰Р°РµРј РѕСЂСѓР¶РёРµ Рє С†РµР»РµРІРѕР№ РїРѕР·РёС†РёРё
         transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, returnSpeed * Time.deltaTime);
     }
 }

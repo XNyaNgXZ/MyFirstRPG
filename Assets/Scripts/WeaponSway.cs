@@ -1,33 +1,62 @@
-using UnityEngine;
+п»їusing UnityEngine;
 
 public class WeaponSway : MonoBehaviour
 {
-    [Header("Настройки инерции")]
-    public float swayAmount = 0.02f;     // Множитель силы инерции
-    public float maxSwayAmount = 0.06f;  // Максимальное смещение
-    public float smoothAmount = 6f;      // Плавность возврата в исходное положение
+    [Header("РРЅРµСЂС†РёСЏ РѕС‚ РјС‹С€Рё")]
+    public float swayAmount = 0.02f;
+    public float maxSwayAmount = 0.06f;
+    public float smoothAmount = 6f;
+
+    [Header("РРЅРµСЂС†РёСЏ РѕС‚ РґРІРёР¶РµРЅРёСЏ WASD")]
+    public float moveSwayAmount = 0.04f;    // СЃРёР»Р° СЃРјРµС‰РµРЅРёСЏ РѕС‚ РґРІРёР¶РµРЅРёСЏ
+    public float maxMoveSwayAmount = 0.08f; // РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ СЃРјРµС‰РµРЅРёРµ
+    public float moveSmoothAmount = 5f;     // РїР»Р°РІРЅРѕСЃС‚СЊ
 
     private Vector3 initialPosition;
+    private PlayerMovement playerMovement;
 
     void Start()
     {
-        // Запоминаем исходную локальную позицию оружия (относительно камеры/рук)
         initialPosition = transform.localPosition;
+        playerMovement = GetComponentInParent<PlayerMovement>();
     }
 
     void Update()
     {
-        // Получаем движения мыши и умножаем на силу инерции
-        float moveX = -Input.GetAxis("Mouse X") * swayAmount;
-        float moveY = -Input.GetAxis("Mouse Y") * swayAmount;
+        // в”Ђв”Ђв”Ђ РРЅРµСЂС†РёСЏ РѕС‚ РјС‹С€Рё в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        float mouseX = -Input.GetAxis("Mouse X") * swayAmount;
+        float mouseY = -Input.GetAxis("Mouse Y") * swayAmount;
+        mouseX = Mathf.Clamp(mouseX, -maxSwayAmount, maxSwayAmount);
+        mouseY = Mathf.Clamp(mouseY, -maxSwayAmount, maxSwayAmount);
 
-        // Ограничиваем максимальное смещение, чтобы оружие не "улетало"
-        moveX = Mathf.Clamp(moveX, -maxSwayAmount, maxSwayAmount);
-        moveY = Mathf.Clamp(moveY, -maxSwayAmount, maxSwayAmount);
+        // в”Ђв”Ђв”Ђ РЎРјРµС‰РµРЅРёРµ РѕС‚ WASD в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        float h = Input.GetAxisRaw("Horizontal"); // A/D в†’ -1/1
+        float v = Input.GetAxisRaw("Vertical");   // S/W в†’ -1/1
 
-        // Рассчитываем целевую позицию
-        Vector3 targetPosition = new Vector3(moveX, moveY, 0f);
-        // Плавно перемещаем оружие к целевой позиции (с учётом изначального положения)
-        transform.localPosition = Vector3.Lerp(transform.localPosition, initialPosition + targetPosition, Time.deltaTime * smoothAmount);
+        // РќРѕСЂРјР°Р»РёР·СѓРµРј РґРёР°РіРѕРЅР°Р»СЊ
+        Vector2 moveDir = new Vector2(h, v);
+        if (moveDir.magnitude > 1f) moveDir.Normalize();
+
+        // вњ… Р СѓРєР° СЃРјРµС‰Р°РµС‚СЃСЏ РІ СЃС‚РѕСЂРѕРЅСѓ РґРІРёР¶РµРЅРёСЏ
+        // Р’Р»РµРІРѕ (A) в†’ СЂСѓРєР° СѓС…РѕРґРёС‚ РІР»РµРІРѕ РїРѕ X
+        // Р’РїРµСЂС‘Рґ (W) в†’ СЂСѓРєР° СѓС…РѕРґРёС‚ РІРїРµСЂС‘Рґ РїРѕ Z (РІРЅРёР· РїРѕ Y РЅРµРјРЅРѕРіРѕ)
+        // РќР°Р·Р°Рґ (S) в†’ СЂСѓРєР° СѓС…РѕРґРёС‚ РЅР°Р·Р°Рґ
+        float moveSwayX = -moveDir.x * moveSwayAmount;
+        float moveSwayZ = moveDir.y * moveSwayAmount;
+        float moveSwayY = -Mathf.Abs(moveDir.magnitude) * moveSwayAmount * 0.3f;
+
+        moveSwayX = Mathf.Clamp(moveSwayX, -maxMoveSwayAmount, maxMoveSwayAmount);
+        moveSwayZ = Mathf.Clamp(moveSwayZ, -maxMoveSwayAmount, maxMoveSwayAmount);
+
+        // в”Ђв”Ђв”Ђ РС‚РѕРіРѕРІР°СЏ РїРѕР·РёС†РёСЏ в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+        Vector3 mouseSway = new Vector3(mouseX, mouseY, 0f);
+        Vector3 moveSway = new Vector3(moveSwayX, moveSwayY, moveSwayZ);
+
+        Vector3 targetPosition = initialPosition + mouseSway + moveSway;
+
+        transform.localPosition = Vector3.Lerp(
+            transform.localPosition,
+            targetPosition,
+            Time.deltaTime * smoothAmount);
     }
 }

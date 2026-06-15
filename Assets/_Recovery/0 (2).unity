@@ -14,10 +14,10 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
-  m_Fog: 1
-  m_FogColor: {r: 0.23018861, g: 0.23018861, b: 0.23018861, a: 1}
-  m_FogMode: 3
-  m_FogDensity: 0.02
+  m_Fog: 0
+  m_FogColor: {r: 0.4037736, g: 0.4037736, b: 0.4037736, a: 1}
+  m_FogMode: 1
+  m_FogDensity: 0.01
   m_LinearFogStart: 5
   m_LinearFogEnd: 25
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
@@ -1256,13 +1256,13 @@ MonoBehaviour:
   isSprinting: 0
   verticalSensitivity: 2
   maxVerticalAngle: 80
-  cameraSmoothing: 16
+  cameraSmoothing: 18
   tiltAmount: 0.5
   mouseTiltAmount: 1
   tiltSpeed: 16
   jumpHeight: 1.2
   gravity: -15
-  jumpCooldown: 0.9
+  jumpCooldown: 0.8
   crouchSpeed: 1.5
   standHeight: 2
   crouchHeight: 1
@@ -1286,7 +1286,7 @@ MonoBehaviour:
   footstepSound: {fileID: 8300000, guid: 171256c5604f7634ba45a22a94a1ce9e, type: 3}
   walkVolume: 0.08
   sprintVolume: 0.1
-  crouchVolume: 0.025
+  crouchVolume: 0.05
   walkInterval: 0.6
   sprintInterval: 0.35
   crouchInterval: 0.9
@@ -1443,14 +1443,17 @@ MonoBehaviour:
   unarmedRange: 2
   weaponRange: 3.5
   unarmedDamage: 0
-  minWindUpTime: 0.2
-  maxWindUpTime: 1.5
+  chargeTime: 2.5
+  chargeMinTime: 0.5
+  chargeMultiplier: 2
+  chargeKnockback: 10
+  fovKickAmount: 5
+  chargeReadyVolume: 0.1
   weaponHitSound: {fileID: 8300000, guid: ec6c0a18ed156b1459a27a13aa5df2cc, type: 3}
   weaponMissSound: {fileID: 8300000, guid: a038d95c2dde9324a980374b8513ddda, type: 3}
-  weaponWindUpSound: {fileID: 0}
+  chargeReadySound: {fileID: 8300000, guid: fd296da5c4a337f49bcd5d5e3e7eae3e, type: 3}
   hitVolume: 0.2
   missVolume: 0.2
-  windUpVolume: 0.5
   shieldRaiseSound: {fileID: 8300000, guid: 9368ccccf91c6b14786dfa4b511bd02e, type: 3}
   shieldVolume: 0.5
 --- !u!114 &210126794
@@ -1491,7 +1494,24 @@ MonoBehaviour:
   staminaOffsetY: -500
   staminaBarWidth: 200
   staminaBarHeight: 14
+  chargeRightOffsetX: 650
+  chargeRightOffsetY: 40
+  chargeRightWidth: 130
+  chargeRightHeight: 25
+  chargeRightColor: {r: 0.3, g: 0.7, b: 1, a: 1}
+  chargeRightFullColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  chargeRightBgColor: {r: 0.02, g: 0.05, b: 0.1, a: 0.8}
+  chargeLeftOffsetX: 650
+  chargeLeftOffsetY: 40
+  chargeLeftWidth: 130
+  chargeLeftHeight: 25
+  chargeLeftColor: {r: 1, g: 0.4, b: 0.3, a: 1}
+  chargeLeftFullColor: {r: 1, g: 0.85, b: 0.1, a: 1}
+  chargeLeftBgColor: {r: 0.1, g: 0.02, b: 0.02, a: 0.8}
+  chargeFadeInSpeed: 10
+  chargeFadeOutSpeed: 100
   weaponIconSize: 96
+  weaponIconSpacing: 8
   weaponIconBgColor: {r: 0.1, g: 0.1, b: 0.12, a: 0.9}
   weaponIconBorderColor: {r: 0.4, g: 0.4, b: 0.5, a: 0.8}
   weaponIconEmptyColor: {r: 0.15, g: 0.15, b: 0.18, a: 0.6}
@@ -3389,7 +3409,6 @@ GameObject:
   - component: {fileID: 649709180}
   - component: {fileID: 649709178}
   - component: {fileID: 649709181}
-  - component: {fileID: 649709182}
   m_Layer: 0
   m_Name: HandsCamera
   m_TagString: Untagged
@@ -3523,26 +3542,6 @@ MonoBehaviour:
   swayAmount: 0.02
   maxSwayAmount: 0.06
   smoothAmount: 6
-  moveSwayAmount: 0.04
-  maxMoveSwayAmount: 0.08
-  moveSmoothAmount: 5
---- !u!114 &649709182
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 649709176}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 172515602e62fb746b5d573b38a5fe58, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.RenderPipelines.Core.Runtime::UnityEngine.Rendering.Volume
-  m_IsGlobal: 1
-  priority: 0
-  blendDistance: 0
-  weight: 1
-  sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
 --- !u!1 &673408374
 GameObject:
   m_ObjectHideFlags: 0
@@ -3905,8 +3904,8 @@ MonoBehaviour:
   sprintBobAmountX: 0.02
   sprintBobAmountY: 0.02
   crouchBobSpeed: 3.5
-  crouchBobAmountX: 0.01
-  crouchBobAmountY: 0.01
+  crouchBobAmountX: 0.02
+  crouchBobAmountY: 0.02
   returnSpeed: 8
 --- !u!114 &741499910
 MonoBehaviour:
@@ -3923,9 +3922,6 @@ MonoBehaviour:
   swayAmount: 0.2
   maxSwayAmount: 0.4
   smoothAmount: 5
-  moveSwayAmount: 0.04
-  maxMoveSwayAmount: 0.08
-  moveSmoothAmount: 5
 --- !u!114 &741499911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3945,8 +3941,8 @@ MonoBehaviour:
   sprintBobAmountX: 0.03
   sprintBobAmountY: 0.03
   crouchBobSpeed: 3.5
-  crouchBobAmountX: 0.02
-  crouchBobAmountY: 0.02
+  crouchBobAmountX: 0.01
+  crouchBobAmountY: 0.01
   returnSpeed: 8
 --- !u!1 &785326619
 GameObject:
@@ -4376,7 +4372,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 1000
-  field of view: 60
+  field of view: 55
   orthographic: 0
   orthographic size: 5
   m_Depth: 1
@@ -4418,19 +4414,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fadaf2392a7290e46be4593558fb27f4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HeadBob
-  walkBobSpeed: 5.3
+  walkBobSpeed: 9
   walkBobAmountX: 0.07
   walkBobAmountY: 0.12
-  sprintBobSpeed: 8.8
+  sprintBobSpeed: 13
   sprintBobAmountX: 0.1
   sprintBobAmountY: 0.18
-  crouchBobSpeed: 3.5
-  crouchBobAmountX: 0.02
-  crouchBobAmountY: 0.02
-  landingDipAmount: 0.5
+  crouchBobSpeed: 5
+  crouchBobAmountX: 0.03
+  crouchBobAmountY: 0.05
+  landingDipAmount: 0.4
   landingDipSpeed: 12
   landingReturnSpeed: 6
-  stepImpactAmount: 0.2
+  stepImpactAmount: 0.06
   stepImpactSpeed: 20
   standCamY: 0.5
   crouchCamY: 0.2
