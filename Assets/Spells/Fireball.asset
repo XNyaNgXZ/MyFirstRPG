@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b3bf83a28972234d8366c6c31f01596, type: 3}
+  m_Name: Fireball
+  m_EditorClassIdentifier: Assembly-CSharp::SpellDefinition
+  spellName: Fireball
+  spellType: Fireball
+  damage: 20
+  manaCost: 15
+  manaCostPerSecond: 10
+  healPerSecond: 0
+  projectileSpeed: 20
+  lifetime: 8
+  projectileColor: {r: 1, g: 0.4, b: 0.1, a: 1}
+  projectileSize: 0.18
+  icon: {fileID: 0}
+  castSound: {fileID: 8300000, guid: 46050371918b45c4f9978a1429ff0b4c, type: 3}
+  impactSound: {fileID: 8300000, guid: fda2f351c12793e42b60f84ddca7aed1, type: 3}
+  chargeSound: {fileID: 0}
+  isBook: 1

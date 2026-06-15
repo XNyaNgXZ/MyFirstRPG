@@ -78,7 +78,16 @@ public class ItemHighlighter : MonoBehaviour
                 {
                     hitCollider = hit.collider;
                     var data = hit.collider.GetComponent<ItemData>();
-                    itemName = data != null ? data.Name : hit.collider.name;
+                    if (data != null)
+                    {
+                        itemName = data.Name;
+                        // ✅ Показываем количество если стакаемый предмет
+                        string t = data.Type;
+                        bool stackable = t == "Arrow" || t == "Potion" || t == "ManaPotion";
+                        if (stackable && data.Value > 1)
+                            itemName += $" x{data.Value}";
+                    }
+                    else itemName = hit.collider.name;
                 }
             }
         }

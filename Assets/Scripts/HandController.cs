@@ -5,14 +5,7 @@ public class HandController : MonoBehaviour
 {
     public enum WeaponMode
     {
-        Unarmed,
-        OneHand,
-        OneHandLeft,
-        DualWield,
-        TwoHand,
-        Bow,
-        Magic,
-        SwordShield
+        Unarmed, OneHand, OneHandLeft, DualWield, TwoHand, Bow, Magic, SwordShield
     }
 
     [Header("Режим оружия")]
@@ -49,7 +42,7 @@ public class HandController : MonoBehaviour
     public float minWindUpTime = 0.2f;
     public float maxWindUpTime = 1.5f;
 
-    [Header("Замах двуручного (медленнее)")]
+    [Header("Замах двуручного")]
     public float twoHandMinWindUpTime = 0.4f;
     public float twoHandMaxWindUpTime = 2f;
 
@@ -66,16 +59,25 @@ public class HandController : MonoBehaviour
     private float bowDrawTimer = 0f;
     private bool isDrawingBow = false;
 
+    [Header("Магия — точка спавна снарядов")]
+    public Transform spellSpawnPointRight;
+    public Transform spellSpawnPointLeft;
+
     [Header("Звуки оружия")]
     public AudioClip weaponHitSound;
     public AudioClip weaponMissSound;
     public AudioClip weaponWindUpSound;
-    public AudioClip bowDrawSound;   // натяжение тетивы
-    public AudioClip bowShootSound;  // выстрел из лука
+    public AudioClip bowDrawSound;
+    public AudioClip bowShootSound;
 
+    [Header("Звуки магии (запасные)")]
+    public AudioClip spellCastSound;
+    public AudioClip spellHealSound;
+    [Range(0f, 1f)] public float spellVolume = 0.8f;
     [Range(0f, 1f)] public float hitVolume = 0.9f;
     [Range(0f, 1f)] public float missVolume = 0.4f;
     [Range(0f, 1f)] public float windUpVolume = 0.5f;
+    [Range(0f, 1f)] public float bowVolume = 1.0f;
 
     [Header("Блок")]
     public AudioClip shieldRaiseSound;
@@ -93,17 +95,14 @@ public class HandController : MonoBehaviour
     private float groundedGraceTime = 0.15f;
 
     private AudioSource audioSource;
-    private bool isAttackingRight = false;
-    private bool isAttackingLeft = false;
     private EnemyNav pendingEnemy = null;
     private int pendingDamage = 0;
     private bool hasWeaponOnAttack = false;
     private Vector3 pendingHitPoint;
     private bool isReceivingBlockHit = false;
 
-    private float airAttackCooldown = 0.8f;
-    private float lastAirAttackTimeRight = -10f;
-    private float lastAirAttackTimeLeft = -10f;
+    private bool isHealingRight = false;
+    private bool isHealingLeft = false;
 
     public static HandController Instance { get; private set; }
     void Awake() => Instance = this;
@@ -113,7 +112,6 @@ public class HandController : MonoBehaviour
         if (inventory == null) inventory = GetComponent<Inventory>();
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
-
         rightHandAnimator?.ResetTrigger("attack");
         rightHandAnimator?.ResetTrigger("pickup");
     }
@@ -138,8 +136,13 @@ public class HandController : MonoBehaviour
         {
             landingBlockTimer = landingBlockDelay;
             landingAttackTimer = landingAttackDelay;
+            isWindingUpRight = false; windUpTimerRight = 0f;
+            isWindingUpLeft = false; windUpTimerLeft = 0f;
+            rightHandAnimator?.ResetTrigger("windUp");
+            rightHandAnimator?.SetTrigger("cancelWindUp");
+            leftHandAnimator?.ResetTrigger("windUp");
+            leftHandAnimator?.SetTrigger("cancelWindUp");
         }
-
         if (landingBlockTimer > 0f) landingBlockTimer -= Time.deltaTime;
         if (landingAttackTimer > 0f) landingAttackTimer -= Time.deltaTime;
         wasGroundedLastFrame = grounded;
@@ -148,309 +151,331 @@ public class HandController : MonoBehaviour
         if (hasShield)
         {
             if (Input.GetMouseButtonDown(1)) blockQueued = true;
-
             if (Input.GetMouseButtonUp(1))
             {
                 blockQueued = false;
-                if (IsBlocking)
-                {
-                    IsBlocking = false;
-                    leftHandAnimator?.SetBool("isBlocking", false);
-                    leftHandAnimator?.ResetTrigger("BlockHit");
-                }
+                if (IsBlocking) { IsBlocking = false; leftHandAnimator?.SetBool("isBlocking", false); }
             }
 
             if (grounded) groundedGraceTimer = groundedGraceTime;
             else groundedGraceTimer -= Time.deltaTime;
-
             bool effectivelyGrounded = grounded || groundedGraceTimer > 0f;
 
-            bool canBlock = blockQueued && effectivelyGrounded &&
-                            !isAttackingRight && !isAttackingLeft &&
-                            landingBlockTimer <= 0f;
-
+            bool canBlock = blockQueued && effectivelyGrounded && !isWindingUpRight && landingBlockTimer <= 0f;
             if (canBlock && !IsBlocking)
             {
                 IsBlocking = true;
                 leftHandAnimator?.SetBool("isBlocking", true);
-                if (shieldRaiseSound != null)
-                    audioSource.PlayOneShot(shieldRaiseSound, shieldVolume);
+                if (shieldRaiseSound != null) audioSource.PlayOneShot(shieldRaiseSound, shieldVolume);
             }
-
-            if (IsBlocking && (!effectivelyGrounded || isAttackingRight || isAttackingLeft)
-                && !isReceivingBlockHit)
-            {
-                IsBlocking = false;
-                leftHandAnimator?.SetBool("isBlocking", false);
-            }
-
+            if (IsBlocking && (!effectivelyGrounded || isWindingUpRight) && !isReceivingBlockHit)
+            { IsBlocking = false; leftHandAnimator?.SetBool("isBlocking", false); }
             if (IsBlocking) return;
         }
         else
         {
-            IsBlocking = false;
-            blockQueued = false;
+            IsBlocking = false; blockQueued = false;
             leftHandAnimator?.SetBool("isBlocking", false);
         }
 
         // ─── Лук ─────────────────────────────────────────────────────
         if (currentMode == WeaponMode.Bow)
         {
-            if (!grounded)
-            {
-                if (isDrawingBow)
-                {
-                    isDrawingBow = false;
-                    bowDrawTimer = 0f;
-                    twoHandAnimator?.ResetTrigger("draw");
-                }
-            }
+            if (!grounded) { if (isDrawingBow) { isDrawingBow = false; bowDrawTimer = 0f; } }
             else
             {
-                // Начало натяжения
-                if (Input.GetMouseButtonDown(0) && !isAttackingRight && !isDrawingBow
-                    && landingAttackTimer <= 0f)
+                if (Input.GetMouseButtonDown(0) && !isDrawingBow && landingAttackTimer <= 0f)
                 {
                     if (HasArrows())
                     {
-                        isDrawingBow = true;
-                        bowDrawTimer = 0f;
+                        isDrawingBow = true; bowDrawTimer = 0f;
                         twoHandAnimator?.SetTrigger("draw");
+                        // ✅ Зацикленный звук натяжения
                         if (bowDrawSound != null)
-                            audioSource.PlayOneShot(bowDrawSound, windUpVolume);
+                        {
+                            audioSource.clip = bowDrawSound;
+                            audioSource.loop = true;
+                            audioSource.volume = bowVolume;
+                            audioSource.Play();
+                        }
                     }
-                    else
-                    {
-                        Debug.Log("Нет стрел!");
-                    }
+                    else Debug.Log("Нет стрел!");
                 }
-
-                // Держим натяжение
                 if (Input.GetMouseButton(0) && isDrawingBow)
                     bowDrawTimer = Mathf.Min(bowDrawTimer + Time.deltaTime, bowMaxDrawTime);
-
-                // Отпустили — выстрел
                 if (Input.GetMouseButtonUp(0) && isDrawingBow)
                 {
-                    if (bowDrawTimer >= bowMinDrawTime
-                        && Time.time >= lastAttackTimeRight + attackCooldown)
+                    // ✅ Останавливаем звук натяжения
+                    audioSource.loop = false;
+                    audioSource.Stop();
+                    if (bowDrawTimer >= bowMinDrawTime && Time.time >= lastAttackTimeRight + attackCooldown)
                     {
-                        ShootArrow();
-                        twoHandAnimator?.SetTrigger("shoot");
+                        ShootArrow(); twoHandAnimator?.SetTrigger("shoot");
                         lastAttackTimeRight = Time.time;
                     }
-                    else
-                    {
-                        twoHandAnimator?.ResetTrigger("draw");
-                    }
-
-                    isDrawingBow = false;
-                    bowDrawTimer = 0f;
+                    else twoHandAnimator?.ResetTrigger("draw");
+                    isDrawingBow = false; bowDrawTimer = 0f;
                 }
             }
             return;
         }
 
-        // ─── Двуручное (ЛКМ) ─────────────────────────────────────────
+        // ─── Двуручное ───────────────────────────────────────────────
         if (currentMode == WeaponMode.TwoHand)
         {
-            if (!grounded)
-            {
-                if (Input.GetMouseButtonDown(0) && !isAttackingRight
-                    && Time.time >= lastAirAttackTimeRight + airAttackCooldown)
-                {
-                    isAttackingRight = true;
-                    hasWeaponOnAttack = true;
-                    pendingEnemy = null; pendingDamage = 0;
-                    ScanHit(weaponRange, true);
-                    twoHandAnimator?.SetTrigger("attack");
-                    Invoke(nameof(ApplyStoredHit), 0.2f);
-                    Invoke(nameof(ResetAttackRight), 0.5f);
-                    lastAirAttackTimeRight = Time.time;
-                }
+            HandleTwoHand(grounded);
+            return;
+        }
 
-                if (isWindingUpRight)
+        // ─── Магия + оружие ──────────────────────────────────────────
+        SpellDefinition rightSpell = inventory?.GetEquippedSpell("Weapon");
+        SpellDefinition leftSpell = inventory?.GetEquippedSpell("WeaponLeft");
+        Item rightWeapon = inventory?.GetEquippedItem("Weapon");
+
+        if (rightSpell != null)
+            HandleSpellInput(true, rightSpell, grounded, ref isHealingRight, ref lastAttackTimeRight);
+        else
+            HandleWeaponInput(true, rightWeapon, grounded);
+
+        if (!hasShield)
+        {
+            if (leftSpell != null)
+                HandleSpellInput(false, leftSpell, grounded, ref isHealingLeft, ref lastAttackTimeLeft);
+            else
+                HandleWeaponInput(false, inventory?.GetEquippedItem("WeaponLeft"), grounded);
+        }
+    }
+
+    // ─── Магия ───────────────────────────────────────────────────────
+
+    // Накопитель дробного хила
+    private float healAccumulatorRight = 0f;
+    private float healAccumulatorLeft = 0f;
+
+    void HandleSpellInput(bool isRight, SpellDefinition spell, bool grounded,
+                          ref bool isHealing, ref float lastAttackTime)
+    {
+        int mouseBtn = isRight ? 0 : 1;
+        PlayerMana mana = PlayerMana.Instance;
+
+        if (spell.spellType == "Heal")
+        {
+            if (Input.GetMouseButtonDown(mouseBtn))
+            {
+                isHealing = mana != null && mana.HasMana(0.1f);
+                if (isHealing)
                 {
-                    isWindingUpRight = false;
-                    windUpTimerRight = 0f;
-                    twoHandAnimator?.ResetTrigger("windUp");
-                    twoHandAnimator?.SetTrigger("cancelWindUp");
+                    // ✅ Запускаем зацикленный звук лечения
+                    AudioClip healClip = spell.chargeSound != null ? spell.chargeSound : spellHealSound;
+                    if (healClip != null)
+                    {
+                        audioSource.clip = healClip;
+                        audioSource.loop = true;
+                        audioSource.volume = spellVolume * 0.5f;
+                        audioSource.Play();
+                    }
                 }
             }
-            else
+
+            if (Input.GetMouseButton(mouseBtn) && isHealing)
             {
-                float minTime = twoHandMinWindUpTime;
-                float maxTime = twoHandMaxWindUpTime;
-
-                if (Input.GetMouseButtonDown(0) && !isAttackingRight && !isWindingUpRight
-                    && landingAttackTimer <= 0f)
+                float cost = spell.manaCostPerSecond * Time.deltaTime;
+                if (mana != null && mana.HasMana(cost))
                 {
-                    isWindingUpRight = true;
-                    windUpTimerRight = 0f;
-                    twoHandAnimator?.SetTrigger("windUp");
-                    if (weaponWindUpSound != null)
-                        audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
+                    mana.UseManaUnchecked(cost);
+
+                    // ✅ Накапливаем дробный хил и применяем целыми числами
+                    ref float acc = ref (isRight ? ref healAccumulatorRight : ref healAccumulatorLeft);
+                    acc += spell.healPerSecond * Time.deltaTime;
+                    int healAmount = Mathf.FloorToInt(acc);
+                    if (healAmount > 0)
+                    {
+                        acc -= healAmount;
+                        PlayerHealth ph = GetComponent<PlayerHealth>();
+                        if (ph != null) ph.Heal(healAmount);
+                    }
                 }
-
-                if (Input.GetMouseButton(0) && isWindingUpRight)
-                    windUpTimerRight = Mathf.Min(windUpTimerRight + Time.deltaTime, maxTime);
-
-                if (Input.GetMouseButtonUp(0) && isWindingUpRight)
+                else
                 {
-                    if (windUpTimerRight >= minTime
-                        && Time.time >= lastAttackTimeRight + attackCooldown)
-                    {
-                        isAttackingRight = true;
-                        hasWeaponOnAttack = true;
-                        pendingEnemy = null; pendingDamage = 0;
-                        ScanHit(weaponRange * 1.3f, true);
-                        twoHandAnimator?.ResetTrigger("strike");
-                        twoHandAnimator?.SetTrigger("strike");
-                        Invoke(nameof(ApplyStoredHit), 0.2f);
-                        Invoke(nameof(ResetAttackRight), 0.7f);
-                        lastAttackTimeRight = Time.time;
-                    }
-                    else
-                    {
-                        twoHandAnimator?.ResetTrigger("windUp");
-                        twoHandAnimator?.SetTrigger("cancelWindUp");
-                    }
-
-                    isWindingUpRight = false;
-                    windUpTimerRight = 0f;
+                    isHealing = false;
+                    audioSource.loop = false;
+                    audioSource.Stop();
                 }
+            }
+
+            if (Input.GetMouseButtonUp(mouseBtn))
+            {
+                isHealing = false;
+                // ✅ Останавливаем звук при отпускании
+                audioSource.loop = false;
+                audioSource.Stop();
+                if (isRight) healAccumulatorRight = 0f;
+                else healAccumulatorLeft = 0f;
             }
             return;
         }
 
-        // ─── Правая рука (ЛКМ) ───────────────────────────────────────
-        bool hasRightWeapon = false;
-        Item rightWeapon = inventory?.GetEquippedItem("Weapon");
-        if (rightWeapon != null && rightWeapon.itemType == "Weapon")
-            hasRightWeapon = true;
-        if (currentMode == WeaponMode.SwordShield && hasRightWeapon)
-            hasRightWeapon = true;
-        if (currentMode == WeaponMode.OneHand || currentMode == WeaponMode.DualWield)
-            hasRightWeapon = (rightWeapon != null && rightWeapon.itemType == "Weapon");
-
-        if (hasRightWeapon)
+        if (Input.GetMouseButtonDown(mouseBtn) && grounded && Time.time >= lastAttackTime + attackCooldown)
         {
-            if (!grounded)
+            if (mana != null && mana.UseMana(spell.manaCost))
             {
-                if (Input.GetMouseButtonDown(0) && !isAttackingRight && !isAttackingLeft
-                    && Time.time >= lastAirAttackTimeRight + airAttackCooldown)
-                {
-                    StartAirAttack(true, false);
-                    lastAirAttackTimeRight = Time.time;
-                }
+                CastSpell(spell, isRight);
+                lastAttackTime = Time.time;
+                if (isRight) rightHandAnimator?.SetTrigger("attack");
+                else leftHandAnimator?.SetTrigger("attack");
+            }
+        }
+    }
 
-                if (isWindingUpRight)
-                {
-                    isWindingUpRight = false;
-                    windUpTimerRight = 0f;
-                    rightHandAnimator?.ResetTrigger("windUp");
-                    rightHandAnimator?.SetTrigger("cancelWindUp");
-                }
+    void CastSpell(SpellDefinition spell, bool isRight)
+    {
+        Camera cam = mainCamera ?? Camera.main;
+        if (cam == null) return;
+        Transform spawnPoint = isRight ? spellSpawnPointRight : spellSpawnPointLeft;
+        Vector3 spawnPos = spawnPoint != null
+            ? spawnPoint.position
+            : cam.transform.position + cam.transform.forward * 0.5f;
+        Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+        SpellProjectile.Spawn(spell, spawnPos, ray.direction);
+        AudioClip castClip = spell.castSound != null ? spell.castSound : spellCastSound;
+        if (castClip != null) audioSource.PlayOneShot(castClip, spellVolume);
+    }
+
+    // ─── Оружие — логика как в Lunacid ───────────────────────────────
+    // Замах зажатием, удар при отпускании, можно сразу снова зажимать
+
+    void HandleWeaponInput(bool isRight, Item weapon, bool grounded)
+    {
+        if (weapon == null) return;
+        bool isWeapon = weapon.itemType == "Weapon" || weapon.itemType == "WeaponLeft";
+        if (!isWeapon) return;
+
+        int mouseBtn = isRight ? 0 : 1;
+        ref float lastTime = ref lastAttackTimeRight;
+        ref bool isWindingUp = ref isWindingUpRight;
+        ref float windUpTimer = ref windUpTimerRight;
+        if (!isRight)
+        {
+            lastTime = ref lastAttackTimeLeft;
+            isWindingUp = ref isWindingUpLeft;
+            windUpTimer = ref windUpTimerLeft;
+        }
+
+        if (!grounded)
+        {
+            // В воздухе — сбрасываем замах
+            if (isWindingUp)
+            {
+                isWindingUp = false; windUpTimer = 0f;
+                if (isRight) { rightHandAnimator?.ResetTrigger("windUp"); rightHandAnimator?.SetTrigger("cancelWindUp"); }
+                else { leftHandAnimator?.ResetTrigger("windUp"); leftHandAnimator?.SetTrigger("cancelWindUp"); }
+            }
+            return;
+        }
+
+        // Нажали — начинаем замах (минимум 150мс между атаками)
+        if (Input.GetMouseButtonDown(mouseBtn) && landingAttackTimer <= 0f
+            && Time.time >= lastTime + 0.15f)
+        {
+            isWindingUp = true; windUpTimer = 0f;
+            if (isRight)
+            {
+                rightHandAnimator?.ResetTrigger("strike");
+                rightHandAnimator?.ResetTrigger("cancelWindUp");
+                rightHandAnimator?.SetTrigger("windUp");
             }
             else
             {
-                if (Input.GetMouseButtonDown(0) && !isAttackingRight && !isAttackingLeft
-                    && !isWindingUpRight && !isWindingUpLeft && landingAttackTimer <= 0f)
-                {
-                    isWindingUpRight = true;
-                    windUpTimerRight = 0f;
-                    rightHandAnimator?.SetTrigger("windUp");
-                    if (weaponWindUpSound != null)
-                        audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
-                }
-
-                if (Input.GetMouseButton(0) && isWindingUpRight)
-                    windUpTimerRight = Mathf.Min(windUpTimerRight + Time.deltaTime, maxWindUpTime);
-
-                if (Input.GetMouseButtonUp(0) && isWindingUpRight)
-                {
-                    if (windUpTimerRight >= minWindUpTime
-                        && Time.time >= lastAttackTimeRight + attackCooldown)
-                    {
-                        StartWindUpAttack(true);
-                        lastAttackTimeRight = Time.time;
-                    }
-                    else
-                    {
-                        rightHandAnimator?.ResetTrigger("windUp");
-                        rightHandAnimator?.SetTrigger("cancelWindUp");
-                    }
-
-                    isWindingUpRight = false;
-                    windUpTimerRight = 0f;
-                }
+                leftHandAnimator?.ResetTrigger("strike");
+                leftHandAnimator?.ResetTrigger("cancelWindUp");
+                leftHandAnimator?.SetTrigger("windUp");
             }
+            if (weaponWindUpSound != null) audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
         }
 
-        // ─── Левая рука (ПКМ) ────────────────────────────────────────
-        bool hasLeftWeapon = false;
-        if (leftSlotItem != null)
+        // Держим — накапливаем замах
+        if (Input.GetMouseButton(mouseBtn) && isWindingUp)
+            windUpTimer = Mathf.Min(windUpTimer + Time.deltaTime, maxWindUpTime);
+
+        // Отпустили — бьём всегда без исключений
+        if (Input.GetMouseButtonUp(mouseBtn) && isWindingUp)
         {
-            bool isShieldItem = leftSlotItem.itemName == "Shield" ||
-                                leftSlotItem.itemType == "Shield" ||
-                                leftSlotItem.originalType == "Shield";
-            if (!isShieldItem && (leftSlotItem.itemType == "Weapon" ||
-                                  leftSlotItem.itemType == "WeaponLeft"))
-                hasLeftWeapon = true;
+            if (isRight) rightHandAnimator?.ResetTrigger("windUp");
+            else leftHandAnimator?.ResetTrigger("windUp");
+            DoStrike(isRight, windUpTimer);
+            lastTime = Time.time;
+            isWindingUp = false; windUpTimer = 0f;
+        }
+    }
+
+    // ✅ Просто запускаем анимацию и применяем урон — без блокировки
+    void DoStrike(bool isRight, float windUp = 0f)
+    {
+        hasWeaponOnAttack = isRight;
+        pendingEnemy = null;
+
+        // ✅ Урон от времени замаха: быстрый клик = 0.5x, полный замах = 2x
+        float chargePercent = Mathf.Clamp01(windUp / maxWindUpTime);
+        float damageMultiplier = Mathf.Lerp(0.5f, 2f, chargePercent);
+
+        Item weapon = isRight
+            ? inventory?.GetEquippedItem("Weapon")
+            : inventory?.GetEquippedItem("WeaponLeft");
+
+        pendingDamage = weapon != null
+            ? Mathf.RoundToInt(weapon.value * damageMultiplier)
+            : Mathf.RoundToInt(unarmedDamage * damageMultiplier);
+
+        ScanHit(weaponRange * 1.2f, isRight);
+
+        if (isRight)
+        {
+            rightHandAnimator?.ResetTrigger("strike");
+            rightHandAnimator?.SetTrigger("strike");
+        }
+        else
+        {
+            leftHandAnimator?.ResetTrigger("strike");
+            leftHandAnimator?.SetTrigger("strike");
         }
 
-        if (hasLeftWeapon)
+        Invoke(nameof(ApplyStoredHit), 0.15f);
+    }
+
+    void HandleTwoHand(bool grounded)
+    {
+        if (!grounded)
         {
-            if (!grounded)
+            if (isWindingUpRight) { isWindingUpRight = false; windUpTimerRight = 0f; }
+            return;
+        }
+
+        if (Input.GetMouseButtonDown(0) && landingAttackTimer <= 0f)
+        {
+            isWindingUpRight = true; windUpTimerRight = 0f;
+            twoHandAnimator?.ResetTrigger("strike");
+            twoHandAnimator?.ResetTrigger("cancelWindUp");
+            twoHandAnimator?.SetTrigger("windUp");
+            if (weaponWindUpSound != null) audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
+        }
+
+        if (Input.GetMouseButton(0) && isWindingUpRight)
+            windUpTimerRight = Mathf.Min(windUpTimerRight + Time.deltaTime, twoHandMaxWindUpTime);
+
+        if (Input.GetMouseButtonUp(0) && isWindingUpRight)
+        {
+            if (windUpTimerRight >= twoHandMinWindUpTime && Time.time >= lastAttackTimeRight + attackCooldown)
             {
-                if (Input.GetMouseButtonDown(1) && !isAttackingRight && !isAttackingLeft
-                    && Time.time >= lastAirAttackTimeLeft + airAttackCooldown)
-                {
-                    StartAirAttack(false, true);
-                    lastAirAttackTimeLeft = Time.time;
-                }
-
-                if (isWindingUpLeft)
-                {
-                    isWindingUpLeft = false;
-                    windUpTimerLeft = 0f;
-                    leftHandAnimator?.ResetTrigger("windUp");
-                    leftHandAnimator?.SetTrigger("cancelWindUp");
-                }
+                hasWeaponOnAttack = true; pendingEnemy = null; pendingDamage = 0;
+                ScanHit(weaponRange * 1.3f, true);
+                twoHandAnimator?.ResetTrigger("windUp");
+                twoHandAnimator?.ResetTrigger("strike");
+                twoHandAnimator?.SetTrigger("strike");
+                Invoke(nameof(ApplyStoredHit), 0.2f);
+                lastAttackTimeRight = Time.time;
             }
-            else
-            {
-                if (Input.GetMouseButtonDown(1) && !isAttackingRight && !isAttackingLeft
-                    && !isWindingUpLeft && !isWindingUpRight && landingAttackTimer <= 0f)
-                {
-                    isWindingUpLeft = true;
-                    windUpTimerLeft = 0f;
-                    leftHandAnimator?.SetTrigger("windUp");
-                    if (weaponWindUpSound != null)
-                        audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
-                }
-
-                if (Input.GetMouseButton(1) && isWindingUpLeft)
-                    windUpTimerLeft = Mathf.Min(windUpTimerLeft + Time.deltaTime, maxWindUpTime);
-
-                if (Input.GetMouseButtonUp(1) && isWindingUpLeft)
-                {
-                    if (windUpTimerLeft >= minWindUpTime
-                        && Time.time >= lastAttackTimeLeft + attackCooldown)
-                    {
-                        StartWindUpAttack(false);
-                        lastAttackTimeLeft = Time.time;
-                    }
-                    else
-                    {
-                        leftHandAnimator?.ResetTrigger("windUp");
-                        leftHandAnimator?.SetTrigger("cancelWindUp");
-                    }
-
-                    isWindingUpLeft = false;
-                    windUpTimerLeft = 0f;
-                }
-            }
+            else { twoHandAnimator?.ResetTrigger("windUp"); twoHandAnimator?.SetTrigger("cancelWindUp"); }
+            isWindingUpRight = false; windUpTimerRight = 0f;
         }
     }
 
@@ -470,8 +495,7 @@ public class HandController : MonoBehaviour
             if (inventory.items[i] != null && inventory.items[i].itemType == "Arrow")
             {
                 inventory.items[i].quantity--;
-                if (inventory.items[i].quantity <= 0)
-                    inventory.RemoveItem(i);
+                if (inventory.items[i].quantity <= 0) inventory.RemoveItem(i);
                 InventoryUICode.RefreshIfOpen();
                 return;
             }
@@ -481,107 +505,41 @@ public class HandController : MonoBehaviour
     void ShootArrow()
     {
         if (arrowPrefab == null) return;
-
         Camera cam = mainCamera ?? Camera.main;
         if (cam == null) return;
-
         Vector3 spawnPos = arrowSpawnPoint != null
             ? arrowSpawnPoint.position
             : cam.transform.position + cam.transform.forward;
-
         Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        Vector3 direction = ray.direction;
-
-        GameObject arrowGO = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(direction));
-
+        GameObject arrowGO = Instantiate(arrowPrefab, spawnPos, Quaternion.LookRotation(ray.direction));
         Arrow arrow = arrowGO.GetComponent<Arrow>();
         if (arrow != null)
         {
             float drawPercent = Mathf.Clamp01(bowDrawTimer / bowMaxDrawTime);
             arrow.damage = Mathf.RoundToInt(Mathf.Lerp(5f, arrow.damage, drawPercent));
         }
-
         ConsumeArrow();
-
         AudioClip shootClip = bowShootSound != null ? bowShootSound : weaponHitSound;
-        if (shootClip != null) audioSource.PlayOneShot(shootClip, hitVolume);
-    }
-
-    void StartWindUpAttack(bool isRightHand)
-    {
-        if (isRightHand) isAttackingRight = true;
-        else isAttackingLeft = true;
-
-        hasWeaponOnAttack = isRightHand;
-        pendingEnemy = null;
-        pendingDamage = 0;
-
-        ScanHit(weaponRange * 1.2f, isRightHand);
-
-        if (isRightHand)
-        {
-            rightHandAnimator?.ResetTrigger("strike");
-            rightHandAnimator?.SetTrigger("strike");
-            Invoke(nameof(ApplyStoredHit), 0.15f);
-            Invoke(nameof(ResetAttackRight), 0.6f);
-        }
-        else
-        {
-            leftHandAnimator?.ResetTrigger("strike");
-            leftHandAnimator?.SetTrigger("strike");
-            Invoke(nameof(ApplyStoredHit), 0.15f);
-            Invoke(nameof(ResetAttackLeft), 0.6f);
-        }
-    }
-
-    void StartAirAttack(bool isRightHand, bool isLeftHand)
-    {
-        if (isLeftHand) isAttackingLeft = true;
-        else isAttackingRight = true;
-
-        hasWeaponOnAttack = isRightHand;
-        pendingEnemy = null;
-        pendingDamage = 0;
-
-        ScanHit(weaponRange, isRightHand);
-
-        if (isLeftHand) leftHandAnimator?.SetTrigger("attack");
-        else rightHandAnimator?.SetTrigger("attack");
-
-        Invoke(nameof(ApplyStoredHit), 0.2f);
-        if (isLeftHand) Invoke(nameof(ResetAttackLeft), 0.5f);
-        else Invoke(nameof(ResetAttackRight), 0.5f);
+        if (shootClip != null) audioSource.PlayOneShot(shootClip, bowVolume);
     }
 
     void UpdateAnimatorParams()
     {
         CharacterController cc = GetComponent<CharacterController>();
         PlayerMovement pm = GetComponent<PlayerMovement>();
-
         bool grounded = cc != null && cc.isGrounded;
         bool crouching = pm != null && pm.IsCrouching;
-
-        if (rightHandAnimator != null)
-        {
-            rightHandAnimator.SetBool("isGrounded", grounded);
-            rightHandAnimator.SetBool("isCrouching", crouching);
-        }
-        if (leftHandAnimator != null)
-        {
-            leftHandAnimator.SetBool("isGrounded", grounded);
-            leftHandAnimator.SetBool("isCrouching", crouching);
-        }
-        if (twoHandAnimator != null)
-        {
-            twoHandAnimator.SetBool("isGrounded", grounded);
-            twoHandAnimator.SetBool("isCrouching", crouching);
-        }
+        rightHandAnimator?.SetBool("isGrounded", grounded);
+        rightHandAnimator?.SetBool("isCrouching", crouching);
+        leftHandAnimator?.SetBool("isGrounded", grounded);
+        leftHandAnimator?.SetBool("isCrouching", crouching);
+        twoHandAnimator?.SetBool("isGrounded", grounded);
+        twoHandAnimator?.SetBool("isCrouching", crouching);
     }
 
     public void SetWeaponMode(WeaponMode mode)
     {
         currentMode = mode;
-
         rightHandAnimator?.SetBool("hasWeapon", false);
         rightHandAnimator?.SetBool("hasMagic", false);
         leftHandAnimator?.SetBool("hasWeapon", false);
@@ -592,31 +550,33 @@ public class HandController : MonoBehaviour
 
         switch (mode)
         {
-            case WeaponMode.OneHand:
-                rightHandAnimator?.SetBool("hasWeapon", true); break;
-            case WeaponMode.OneHandLeft:
-                leftHandAnimator?.SetBool("hasWeapon", true); break;
+            case WeaponMode.OneHand: rightHandAnimator?.SetBool("hasWeapon", true); break;
+            case WeaponMode.OneHandLeft: leftHandAnimator?.SetBool("hasWeapon", true); break;
             case WeaponMode.DualWield:
                 rightHandAnimator?.SetBool("hasWeapon", true);
                 leftHandAnimator?.SetBool("hasWeapon", true); break;
-            case WeaponMode.TwoHand:
-                twoHandAnimator?.SetBool("hasWeapon", true); break;
-            case WeaponMode.Bow:
-                twoHandAnimator?.SetBool("hasBow", true); break;
-            case WeaponMode.Magic:
-                rightHandAnimator?.SetBool("hasMagic", true);
-                leftHandAnimator?.SetBool("hasMagic", true); break;
+            case WeaponMode.TwoHand: twoHandAnimator?.SetBool("hasWeapon", true); break;
+            case WeaponMode.Bow: twoHandAnimator?.SetBool("hasBow", true); break;
             case WeaponMode.SwordShield:
                 rightHandAnimator?.SetBool("hasWeapon", true);
                 leftHandAnimator?.SetBool("hasShield", true); break;
+            case WeaponMode.Magic:
+                bool hasRightSpell = inventory?.GetEquippedSpell("Weapon") != null;
+                bool hasLeftSpell = inventory?.GetEquippedSpell("WeaponLeft") != null;
+                bool hasRightWeapon = inventory?.GetEquippedItem("Weapon") != null;
+                bool hasLeftWeapon = inventory?.GetEquippedItem("WeaponLeft") != null;
+                if (hasRightSpell) rightHandAnimator?.SetBool("hasMagic", true);
+                else if (hasRightWeapon) rightHandAnimator?.SetBool("hasWeapon", true);
+                if (hasLeftSpell) leftHandAnimator?.SetBool("hasMagic", true);
+                else if (hasLeftWeapon) leftHandAnimator?.SetBool("hasWeapon", true);
+                break;
         }
     }
 
     public void RefreshLeftHandAnimator()
     {
         Item leftItem = inventory?.GetEquippedItem("WeaponLeft");
-        bool isShield = leftItem != null &&
-                        (leftItem.itemType == "Shield" || leftItem.originalType == "Shield");
+        bool isShield = leftItem != null && (leftItem.itemType == "Shield" || leftItem.originalType == "Shield");
         leftHandAnimator?.SetBool("hasShield", isShield);
         leftHandAnimator?.SetBool("hasWeapon", !isShield && leftItem != null);
     }
@@ -635,7 +595,6 @@ public class HandController : MonoBehaviour
         if (twoHandObject == null) return;
         Transform weapon = FindDeep(twoHandObject.transform, "TwoHandWeapon");
         Transform bow = FindDeep(twoHandObject.transform, "TwoHandBow");
-
         if (currentMode == WeaponMode.Bow)
         {
             if (bow != null) bow.gameObject.SetActive(true);
@@ -682,10 +641,8 @@ public class HandController : MonoBehaviour
     {
         Camera cam = mainCamera ?? Camera.main;
         if (cam == null) return;
-
         Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         int ignoreHandsLayer = ~LayerMask.GetMask("Hands");
-
         if (Physics.SphereCast(ray, hitSphereRadius, out RaycastHit hit, range, ignoreHandsLayer))
         {
             pendingHitPoint = hit.point;
@@ -695,20 +652,12 @@ public class HandController : MonoBehaviour
                 if (enemy != null)
                 {
                     pendingEnemy = enemy;
-                    Item weapon = null;
-
-                    if (currentMode == WeaponMode.TwoHand)
-                        weapon = inventory?.GetEquippedItem("Weapon");
-                    else if (forRightHand)
-                        weapon = inventory?.GetEquippedItem("Weapon");
-                    else
-                    {
-                        weapon = inventory?.GetEquippedItem("WeaponLeft");
-                        if (weapon != null && (weapon.itemName == "Shield" ||
-                            weapon.itemType == "Shield" || weapon.originalType == "Shield"))
-                            weapon = null;
-                    }
-
+                    Item weapon = forRightHand
+                        ? inventory?.GetEquippedItem("Weapon")
+                        : inventory?.GetEquippedItem("WeaponLeft");
+                    if (weapon != null && (weapon.itemName == "Shield" ||
+                        weapon.itemType == "Shield" || weapon.originalType == "Shield"))
+                        weapon = null;
                     pendingDamage = weapon != null ? weapon.value : unarmedDamage;
                 }
             }
@@ -720,21 +669,15 @@ public class HandController : MonoBehaviour
         if (pendingEnemy != null)
         {
             pendingEnemy.TakeDamage(pendingDamage);
-            if (pendingHitPoint != Vector3.zero)
-                HitSpark.Spawn(pendingHitPoint, hasWeaponOnAttack);
+            if (pendingHitPoint != Vector3.zero) HitSpark.Spawn(pendingHitPoint, hasWeaponOnAttack);
             if (weaponHitSound != null) audioSource.PlayOneShot(weaponHitSound, hitVolume);
         }
-        else
-        {
-            if (weaponMissSound != null) audioSource.PlayOneShot(weaponMissSound, missVolume);
-        }
+        else { if (weaponMissSound != null) audioSource.PlayOneShot(weaponMissSound, missVolume); }
         pendingEnemy = null; pendingDamage = 0;
     }
 
     public void PlayPickup() => rightHandAnimator?.SetTrigger("pickup");
     public void ResetPickup() => rightHandAnimator?.ResetTrigger("pickup");
-    void ResetAttackRight() => isAttackingRight = false;
-    void ResetAttackLeft() => isAttackingLeft = false;
 
     public void ShowWeaponModel()
     {

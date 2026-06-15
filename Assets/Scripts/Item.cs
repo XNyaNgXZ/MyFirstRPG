@@ -22,6 +22,12 @@ public class Item
         itemColor = color == default ? Color.white : color;
         itemScale = scale == default ? Vector3.one * 0.4f : scale;
         quantity = 1;
-        maxQuantity = (type == "Arrow" || type == "Potion") ? 99 : 1;
+        maxQuantity = type switch
+        {
+            "Arrow" => 50,
+            "Potion" => 10,
+            "ManaPotion" => 10,
+            _ => 1
+        };
     }
 }

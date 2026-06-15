@@ -66,6 +66,8 @@ public class EquipmentUI : MonoBehaviour
         var scaler = equipmentCanvas.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1920, 1080);
+        scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
+        scaler.matchWidthOrHeight = 0.5f;
         equipmentCanvas.AddComponent<GraphicRaycaster>();
 
         int rows = Mathf.CeilToInt((float)slots.Length / gridColumns);
@@ -112,7 +114,7 @@ public class EquipmentUI : MonoBehaviour
 
         tooltip = new GameObject("EqTooltip"); tooltip.transform.SetParent(equipmentCanvas.transform, false);
         tooltipRect = tooltip.AddComponent<RectTransform>();
-        tooltipRect.sizeDelta = new Vector2(200, 70); tooltipRect.pivot = new Vector2(0, 1);
+        tooltipRect.sizeDelta = new Vector2(200, 80); tooltipRect.pivot = new Vector2(0, 1);
         tooltip.AddComponent<Image>().color = new Color(0.07f, 0.07f, 0.1f, 1f);
         var ttGO = new GameObject("TooltipText"); ttGO.transform.SetParent(tooltip.transform, false);
         var ttr = ttGO.AddComponent<RectTransform>();
@@ -125,27 +127,44 @@ public class EquipmentUI : MonoBehaviour
         tooltip.SetActive(false);
     }
 
-    // ✅ Слот заблокирован если в правой руке двуручное или лук
+    // ✅ Блокировка слотов
     public bool IsSlotBlocked(string slotType)
     {
-        if (slotType == "WeaponLeft" && inventory != null)
+        if (inventory == null) return false;
+
+        // Левая рука заблокирована если двуручное/лук в правой
+        if (slotType == "WeaponLeft")
         {
             Item rightItem = inventory.GetEquippedItem("Weapon");
-            return rightItem != null &&
-                   (inventory.IsTwoHanded(rightItem) || inventory.IsBow(rightItem));
+            return rightItem != null && (inventory.IsTwoHanded(rightItem) || inventory.IsBow(rightItem));
         }
+
         return false;
     }
 
     void CreateSlot(int idx, SlotDef slotDef)
     {
-        Color normalColor = new Color(0.20f, 0.20f, 0.24f, 1f);
+        bool isSpellSlot = slotDef.allowedType == "SpellRight" || slotDef.allowedType == "SpellLeft";
+        Color normalColor = isSpellSlot
+            ? new Color(0.15f, 0.12f, 0.22f, 1f)
+            : new Color(0.20f, 0.20f, 0.24f, 1f);
         Color blockedColor = new Color(0.12f, 0.12f, 0.14f, 1f);
 
         var slotGO = new GameObject($"Slot_{slotDef.name}");
         slotGO.transform.SetParent(slotsContainer, false);
         slotObjects[slotDef.allowedType] = slotGO;
         Image bgImage = slotGO.AddComponent<Image>(); bgImage.color = normalColor;
+
+        // Для слотов заклинаний — фиолетовый бордер
+        if (isSpellSlot)
+        {
+            var border = new GameObject("SpellBorder"); border.transform.SetParent(slotGO.transform, false);
+            var br = border.AddComponent<RectTransform>();
+            br.anchorMin = Vector2.zero; br.anchorMax = Vector2.one;
+            br.offsetMin = new Vector2(-2, -2); br.offsetMax = new Vector2(2, 2);
+            border.AddComponent<Image>().color = new Color(0.5f, 0.3f, 0.8f, 0.4f);
+            border.transform.SetSiblingIndex(0);
+        }
 
         var iconGO = new GameObject("Icon"); iconGO.transform.SetParent(slotGO.transform, false);
         iconGO.transform.SetSiblingIndex(0);
@@ -160,7 +179,9 @@ public class EquipmentUI : MonoBehaviour
         labr.pivot = new Vector2(0.5f, 0); labr.sizeDelta = new Vector2(0, 20); labr.anchoredPosition = Vector2.zero;
         var labt = labelGO.AddComponent<Text>();
         labt.text = slotDef.name; labt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        labt.fontSize = 10; labt.color = new Color(0.6f, 0.6f, 0.7f); labt.alignment = TextAnchor.MiddleCenter;
+        labt.fontSize = 10;
+        labt.color = isSpellSlot ? new Color(0.7f, 0.5f, 1f) : new Color(0.6f, 0.6f, 0.7f);
+        labt.alignment = TextAnchor.MiddleCenter;
 
         var letterGO = new GameObject("Letter"); letterGO.transform.SetParent(slotGO.transform, false);
         var letr = letterGO.AddComponent<RectTransform>();
@@ -180,12 +201,18 @@ public class EquipmentUI : MonoBehaviour
         onEnter.callback.AddListener(_ => {
             if (IsSlotBlocked(slotDef.allowedType)) return;
             bgImage.color = new Color(0.30f, 0.30f, 0.36f, 1f);
-            Item equipped = inventory?.GetEquippedItem(slotDef.allowedType);
+
+            // ✅ Показываем заклинание или оружие
+            SpellDefinition hoverSpell = inventory?.GetEquippedSpell(slotDef.allowedType);
+            Item hoverItem = inventory?.GetEquippedItem(slotDef.allowedType);
             if (tooltip != null)
             {
-                tooltipText.text = equipped != null
-                    ? $"<b>{equipped.itemName}</b>\n{equipped.value}\nЛКМ — снять\nПКМ — выбросить"
-                    : $"<b>{slotDef.name}</b>\n<color=#666666>Пусто</color>";
+                if (hoverSpell != null)
+                    tooltipText.text = $"<b>{hoverSpell.spellName}</b>\nУрон: {hoverSpell.damage}  Мана: {hoverSpell.manaCost}\nЛКМ — снять";
+                else if (hoverItem != null)
+                    tooltipText.text = $"<b>{hoverItem.itemName}</b>\n{hoverItem.value}\nЛКМ — снять\nПКМ — выбросить";
+                else
+                    tooltipText.text = $"<b>{slotDef.name}</b>\n<color=#666666>Пусто</color>";
                 tooltip.SetActive(true);
             }
         });
@@ -201,6 +228,16 @@ public class EquipmentUI : MonoBehaviour
         btn.onClick.AddListener(() => {
             if (IsSlotBlocked(slotDef.allowedType)) return;
             if (inventory == null) return;
+
+            // ✅ Сначала проверяем заклинание, потом оружие
+            SpellDefinition equippedSpell = inventory.GetEquippedSpell(slotDef.allowedType);
+            if (equippedSpell != null)
+            {
+                inventory.UnequipSpell(slotDef.allowedType);
+                RefreshEquipmentUI();
+                return;
+            }
+
             Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
             if (equipped != null) { inventory.UnequipItem(slotDef.allowedType); RefreshEquipmentUI(); }
         });
@@ -209,8 +246,17 @@ public class EquipmentUI : MonoBehaviour
         onRightClick.callback.AddListener(ev => {
             var ped = (PointerEventData)ev;
             if (ped.button != PointerEventData.InputButton.Right) return;
-            if (IsSlotBlocked(slotDef.allowedType)) return;
-            if (inventory == null) return;
+            if (IsSlotBlocked(slotDef.allowedType) || inventory == null) return;
+
+            // ✅ Сначала проверяем заклинание
+            SpellDefinition equippedSpell2 = inventory.GetEquippedSpell(slotDef.allowedType);
+            if (equippedSpell2 != null)
+            {
+                inventory.UnequipSpell(slotDef.allowedType);
+                RefreshEquipmentUI();
+                return;
+            }
+
             Item equipped = inventory.GetEquippedItem(slotDef.allowedType);
             if (equipped == null) return;
 
@@ -222,22 +268,17 @@ public class EquipmentUI : MonoBehaviour
                 {
                     if (inventory.IsTwoHanded(equipped) || inventory.IsBow(equipped))
                         HandController.Instance.HideTwoHandModel();
-                    else
-                        HandController.Instance.HideWeaponModel();
+                    else HandController.Instance.HideWeaponModel();
                     HandController.Instance.SetWeaponMode(HandController.WeaponMode.Unarmed);
                     HandController.Instance.ResetPickup();
                 }
                 else if (slotDef.allowedType == "WeaponLeft")
                 {
-                    if (inventory.IsShield(equipped))
-                        HandController.Instance.HideShieldModel();
-                    else
-                        HandController.Instance.HideWeaponModelLeft();
-
+                    if (inventory.IsShield(equipped)) HandController.Instance.HideShieldModel();
+                    else HandController.Instance.HideWeaponModelLeft();
                     bool hasWeapon = inventory.equippedItems.ContainsKey("Weapon");
                     HandController.Instance.SetWeaponMode(
-                        hasWeapon ? HandController.WeaponMode.OneHand
-                                  : HandController.WeaponMode.Unarmed);
+                        hasWeapon ? HandController.WeaponMode.OneHand : HandController.WeaponMode.Unarmed);
                 }
             }
 
@@ -265,10 +306,8 @@ public class EquipmentUI : MonoBehaviour
 
         var rend = drop.GetComponent<Renderer>();
         if (retroMaterial != null) rend.material = new Material(retroMaterial);
-        if (item.worldTexture != null)
-            rend.material.mainTexture = item.worldTexture;
-        else
-            rend.material.color = GetItemColor(item);
+        if (item.worldTexture != null) rend.material.mainTexture = item.worldTexture;
+        else rend.material.color = GetItemColor(item);
 
         var data = drop.AddComponent<ItemData>();
         data.itemName = item.itemName; data.itemType = item.itemType;
@@ -278,17 +317,14 @@ public class EquipmentUI : MonoBehaviour
         var col = drop.GetComponent<Collider>();
         var playerCol = player.GetComponent<Collider>();
         if (col != null && playerCol != null) Physics.IgnoreCollision(col, playerCol);
-
         foreach (var enemy in FindObjectsByType<EnemyNav>())
         {
-            var enemyCol = enemy.GetComponent<Collider>();
-            if (enemyCol != null && col != null)
-                Physics.IgnoreCollision(col, enemyCol);
+            var ec = enemy.GetComponent<Collider>();
+            if (ec != null && col != null) Physics.IgnoreCollision(col, ec);
         }
 
         var rb = drop.AddComponent<Rigidbody>();
         rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
-
         var freezer = drop.AddComponent<ItemFreezer>();
         freezer.delay = dropFreezeDelay;
     }
@@ -322,53 +358,61 @@ public class EquipmentUI : MonoBehaviour
     {
         if (inventory == null) inventory = GetComponent<Inventory>();
         if (inventory == null) return;
-        var equipped = inventory.equippedItems;
 
         foreach (var kvp in slotObjects)
         {
             string slotType = kvp.Key; GameObject slot = kvp.Value;
-            Item item = equipped.ContainsKey(slotType) ? equipped[slotType] : null;
-
             bool blocked = IsSlotBlocked(slotType);
 
-            if (blocked)
-                slot.GetComponent<Image>().color = new Color(0.12f, 0.12f, 0.14f, 1f);
-            else
-                slot.GetComponent<Image>().color = item != null
-                    ? new Color(0.28f, 0.28f, 0.33f)
-                    : new Color(0.20f, 0.20f, 0.24f);
+            Color normalColor = new Color(0.20f, 0.20f, 0.24f, 1f);
+            Color blockedColor = new Color(0.12f, 0.12f, 0.14f, 1f);
+            Color filledColor = new Color(0.28f, 0.28f, 0.33f, 1f);
+
+            // ✅ Проверяем и оружие и заклинание в слоте
+            bool hasWeapon = inventory.equippedItems.ContainsKey(slotType);
+            SpellDefinition spell = (slotType == "Weapon" || slotType == "WeaponLeft")
+                ? inventory.GetEquippedSpell(slotType) : null;
+            bool hasSpell = spell != null;
+
+            slot.GetComponent<Image>().color = blocked ? blockedColor
+                : (hasWeapon || hasSpell) ? filledColor : normalColor;
 
             var iconImg = slot.transform.Find("Icon")?.GetComponent<Image>();
             var letterTxt = slot.transform.Find("Letter")?.GetComponent<Text>();
+            if (iconImg == null) continue;
 
-            if (iconImg != null)
+            if (blocked)
             {
-                if (blocked)
+                iconImg.color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
+                if (letterTxt != null) { letterTxt.text = "✕"; letterTxt.color = new Color(0.5f, 0.5f, 0.5f, 0.5f); }
+            }
+            else if (hasSpell)
+            {
+                // ✅ Заклинание — показываем цветом заклинания
+                iconImg.color = spell.projectileColor;
+                if (letterTxt != null)
                 {
-                    iconImg.color = new Color(0.3f, 0.3f, 0.3f, 0.3f);
-                    if (letterTxt != null)
-                    {
-                        letterTxt.text = "✕";
-                        letterTxt.color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-                    }
+                    letterTxt.text = !string.IsNullOrEmpty(spell.spellName) ? spell.spellName[0].ToString() : "З";
+                    letterTxt.color = Color.white;
                 }
-                else if (item != null)
+            }
+            else if (hasWeapon)
+            {
+                Item item = inventory.equippedItems[slotType];
+                iconImg.color = GetItemColor(item);
+                if (letterTxt != null)
                 {
-                    iconImg.color = GetItemColor(item);
-                    if (letterTxt != null)
-                    {
-                        letterTxt.text = !string.IsNullOrEmpty(item.itemName) ? item.itemName[0].ToString() : "?";
-                        letterTxt.color = new Color(1f, 1f, 1f, 0.9f);
-                    }
+                    letterTxt.text = !string.IsNullOrEmpty(item.itemName) ? item.itemName[0].ToString() : "?";
+                    letterTxt.color = new Color(1, 1, 1, 0.9f);
                 }
-                else
+            }
+            else
+            {
+                iconImg.color = new Color(0, 0, 0, 0);
+                if (letterTxt != null)
                 {
-                    iconImg.color = new Color(0, 0, 0, 0);
-                    if (letterTxt != null)
-                    {
-                        foreach (var s in slots) if (s.allowedType == slotType) { letterTxt.text = s.allowedType[0].ToString(); break; }
-                        letterTxt.color = new Color(1f, 1f, 1f, 0.18f);
-                    }
+                    foreach (var s in slots) if (s.allowedType == slotType) { letterTxt.text = s.allowedType[0].ToString(); break; }
+                    letterTxt.color = new Color(1, 1, 1, 0.18f);
                 }
             }
         }
@@ -378,7 +422,8 @@ public class EquipmentUI : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Tab))
         {
-            IsOpen = !IsOpen; equipmentPanel.SetActive(IsOpen);
+            IsOpen = !IsOpen;
+            equipmentPanel.SetActive(IsOpen);
             if (IsOpen) { RefreshEquipmentUI(); PlayerMovement.UnlockCursor(); }
             else { PlayerMovement.LockCursor(); if (tooltip != null) tooltip.SetActive(false); }
         }
@@ -395,6 +440,7 @@ public class EquipmentUI : MonoBehaviour
     {
         if (equipmentPanel == null) return;
         IsOpen = open; equipmentPanel.SetActive(open);
-        if (open) RefreshEquipmentUI(); else if (tooltip != null) tooltip.SetActive(false);
+        if (open) RefreshEquipmentUI();
+        else if (tooltip != null) tooltip.SetActive(false);
     }
 }

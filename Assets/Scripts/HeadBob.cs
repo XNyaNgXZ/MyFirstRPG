@@ -1,6 +1,5 @@
 ﻿using UnityEngine;
 
-// Повесь на MainCamera
 public class HeadBob : MonoBehaviour
 {
     [Header("Ходьба")]
@@ -19,13 +18,13 @@ public class HeadBob : MonoBehaviour
     public float crouchBobAmountY = 0.05f;
 
     [Header("Приземление")]
-    public float landingDipAmount = 0.18f;  // насколько камера падает вниз
-    public float landingDipSpeed = 12f;    // скорость падения
-    public float landingReturnSpeed = 6f;   // скорость возврата
+    public float landingDipAmount = 0.18f;
+    public float landingDipSpeed = 12f;
+    public float landingReturnSpeed = 6f;
 
     [Header("Шаговый импакт")]
-    public float stepImpactAmount = 0.06f;  // резкий толчок вниз при каждом шаге
-    public float stepImpactSpeed = 20f;    // скорость затухания импакта
+    public float stepImpactAmount = 0.06f;
+    public float stepImpactSpeed = 20f;
 
     [Header("Позиции камеры")]
     public float standCamY = 0.5f;
@@ -37,15 +36,12 @@ public class HeadBob : MonoBehaviour
     private CharacterController controller;
     private PlayerMovement playerMovement;
     private float timer = 0f;
-    private float lastTimerSin = 0f;  // для определения шага
+    private float lastTimerSin = 0f;
     private Vector3 defaultLocalPos;
 
-    // Приземление
     private float landingOffset = 0f;
     private bool wasGrounded = true;
     private float landingVelocity = 0f;
-
-    // Импакт шага
     private float stepImpactOffset = 0f;
 
     void Start()
@@ -62,19 +58,14 @@ public class HeadBob : MonoBehaviour
         bool uiOpen = InventoryUICode.IsOpen || EquipmentUI.IsOpen;
         bool isGrounded = controller.isGrounded;
         bool isMoving = Input.GetAxisRaw("Horizontal") != 0 ||
-                          Input.GetAxisRaw("Vertical") != 0;
+                        Input.GetAxisRaw("Vertical") != 0;
         bool crouching = playerMovement != null && playerMovement.IsCrouching;
         bool sprinting = playerMovement != null && playerMovement.isSprinting;
 
-        // ✅ Импакт приземления
         if (!wasGrounded && isGrounded)
-        {
-            // ✅ Фиксируем скорость падения до приземления
             landingVelocity = -landingDipAmount;
-        }
         wasGrounded = isGrounded;
 
-        // Анимируем приземление
         if (Mathf.Abs(landingOffset) > 0.001f || Mathf.Abs(landingVelocity) > 0.001f)
         {
             landingOffset += landingVelocity * Time.deltaTime * landingDipSpeed;
@@ -82,7 +73,6 @@ public class HeadBob : MonoBehaviour
             landingOffset = Mathf.Lerp(landingOffset, 0f, landingReturnSpeed * Time.deltaTime);
         }
 
-        // ✅ Импакт шага — резкий толчок при каждом шаге
         stepImpactOffset = Mathf.Lerp(stepImpactOffset, 0f, stepImpactSpeed * Time.deltaTime);
 
         float baseY = crouching ? crouchCamY : standCamY;
@@ -105,13 +95,10 @@ public class HeadBob : MonoBehaviour
             float amountY = sprinting ? sprintBobAmountY : crouching ? crouchBobAmountY : walkBobAmountY;
 
             timer += Time.deltaTime * speed;
-
             float currentSin = Mathf.Sin(timer);
 
-            // ✅ Определяем момент шага — когда синус переходит через ноль вниз
             if (lastTimerSin >= 0f && currentSin < 0f)
                 stepImpactOffset = -stepImpactAmount;
-
             lastTimerSin = currentSin;
 
             Vector3 target = basePos + new Vector3(

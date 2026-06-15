@@ -101,7 +101,7 @@ public class PlayerMovement : MonoBehaviour
             targetYaw += mouseX;
             targetPitch -= mouseY;
             targetPitch = Mathf.Clamp(targetPitch, -maxVerticalAngle, maxVerticalAngle);
-            if (Cursor.lockState != CursorLockMode.Locked) LockCursor();
+
         }
 
         float smooth = cameraSmoothing * Time.deltaTime;

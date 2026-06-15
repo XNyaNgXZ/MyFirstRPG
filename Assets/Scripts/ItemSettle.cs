@@ -33,8 +33,9 @@ public class ItemSettle : MonoBehaviour
     {
         var rb = GetComponent<Rigidbody>();
         if (rb == null) return;
-        rb.linearVelocity = Vector3.zero;      // ← сначала обнуляем
-        rb.angularVelocity = Vector3.zero;     // ← потом
-        rb.isKinematic = true;                 // ← потом кинематик
+        rb.isKinematic = false;        // ✅ сначала выключаем кинематик
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        rb.isKinematic = true;         // потом включаем
     }
 }

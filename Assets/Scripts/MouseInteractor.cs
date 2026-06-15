@@ -26,26 +26,42 @@ public class MouseInteractor : MonoBehaviour
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
         if (!Physics.Raycast(ray, out RaycastHit hit, interactionRange)) return;
 
+        // Свиток/книга заклинания
+        SpellPickup spellPickup = hit.collider.GetComponent<SpellPickup>();
+        if (spellPickup != null)
+        {
+            spellPickup.Pickup(inventory);
+            lastPickupTime = Time.time;
+            if (pickupSound != null)
+                AudioSource.PlayClipAtPoint(pickupSound, transform.position, pickupVolume);
+            if (HandController.Instance != null) HandController.Instance.PlayPickup();
+            return;
+        }
+
+        // Обычный предмет
         ItemData data = hit.collider.GetComponent<ItemData>();
         if (data == null || inventory == null) return;
 
-        Color col = data.Color;
-        Vector3 scale = data.Scale;
-
-        if (col == Color.white || col == default)
-        {
-            var rend = hit.collider.GetComponent<Renderer>();
-            if (rend != null) col = rend.material.color;
-        }
-
+        // ✅ Всё берём из карточки через свойства ItemData (они уже приоритизируют definition)
+        string itemName = data.Name;
+        string itemType = data.Type;
+        int itemValue = data.Value;
+        Color itemColor = data.Color;
+        Vector3 itemScale = data.Scale;
         Texture2D tex = data.definition != null ? data.definition.worldTexture : null;
 
-        Item newItem = new Item(data.Name, data.Type, data.Value, col, scale);
+        // Цвет — если белый/дефолт берём с рендерера
+        if (itemColor == Color.white || itemColor == default)
+        {
+            var rend = hit.collider.GetComponent<Renderer>();
+            if (rend != null) itemColor = rend.material.color;
+        }
+
+        Item newItem = new Item(itemName, itemType, itemValue, itemColor, itemScale);
         newItem.worldTexture = tex;
 
-        // ✅ Для стакаемых предметов quantity берём из Value карточки
-        if (newItem.maxQuantity > 1)
-            newItem.quantity = Mathf.Max(1, data.Value);
+        // ✅ quantity = 1 для всего, кроме стрел где берём itemValue как количество пачки
+        newItem.quantity = itemType == "Arrow" ? Mathf.Max(1, itemValue) : 1;
 
         if (!inventory.AddItem(newItem)) return;
 

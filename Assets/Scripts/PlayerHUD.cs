@@ -15,6 +15,14 @@ public class PlayerHUD : MonoBehaviour
     public float hpBarWidth = 200f;
     public float hpBarHeight = 14f;
 
+    [Header("Mana Bar")]
+    public Color manaColor = new Color(0.15f, 0.40f, 1.00f);
+    public Color manaBgColor = new Color(0.02f, 0.04f, 0.12f);
+    public float manaOffsetX = 20f;
+    public float manaOffsetY = 40f;
+    public float manaBarWidth = 200f;
+    public float manaBarHeight = 14f;
+
     [Header("Stamina Bar")]
     public Color staminaColor = new Color(0.90f, 0.75f, 0.10f);
     public Color staminaBgColor = new Color(0.10f, 0.08f, 0.01f);
@@ -30,6 +38,7 @@ public class PlayerHUD : MonoBehaviour
     public Color weaponIconEmptyColor = new Color(0.15f, 0.15f, 0.18f, 0.0f);
     public Color weaponIconFilledColor = new Color(0.82f, 0.22f, 0.22f, 1f);
     public Color weaponIconShieldColor = new Color(0.22f, 0.48f, 0.85f, 1f);
+    public Color weaponIconSpellColor = new Color(0.4f, 0.2f, 0.9f, 1f);
     public int weaponLetterFontSize = 22;
     public int weaponLabelFontSize = 10;
     public float rightIconOffsetX = 30f;
@@ -47,11 +56,13 @@ public class PlayerHUD : MonoBehaviour
 
     private PlayerHealth playerHealth;
     private PlayerMovement playerMovement;
+    private PlayerMana playerMana;
     private HandController handController;
     private Inventory inventory;
     private GameObject hudCanvas;
 
     private RectTransform hpFill;
+    private RectTransform manaFill;
     private RectTransform staminaFill;
     private CanvasGroup staminaGroup;
 
@@ -76,6 +87,7 @@ public class PlayerHUD : MonoBehaviour
     {
         playerHealth = GetComponent<PlayerHealth>();
         playerMovement = GetComponent<PlayerMovement>();
+        playerMana = GetComponent<PlayerMana>() ?? FindAnyObjectByType<PlayerMana>();
         handController = GetComponent<HandController>() ?? FindAnyObjectByType<HandController>();
         inventory = GetComponent<Inventory>() ?? FindAnyObjectByType<Inventory>();
         BuildHUD();
@@ -99,6 +111,7 @@ public class PlayerHUD : MonoBehaviour
         yield return null; yield return null;
         playerHealth = FindAnyObjectByType<PlayerHealth>();
         playerMovement = FindAnyObjectByType<PlayerMovement>();
+        playerMana = FindAnyObjectByType<PlayerMana>();
         handController = FindAnyObjectByType<HandController>();
         inventory = FindAnyObjectByType<Inventory>();
         hideTimer = 0f; staminaWasFull = true;
@@ -109,25 +122,29 @@ public class PlayerHUD : MonoBehaviour
     {
         hudCanvas = new GameObject("PlayerHUDCanvas");
         var cv = hudCanvas.AddComponent<Canvas>();
-        cv.renderMode = RenderMode.ScreenSpaceOverlay;
-        cv.sortingOrder = 8;
-
+        cv.renderMode = RenderMode.ScreenSpaceOverlay; cv.sortingOrder = 8;
         var sc = hudCanvas.AddComponent<CanvasScaler>();
         sc.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         sc.referenceResolution = new Vector2(1920, 1080);
         sc.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
         sc.matchWidthOrHeight = 0.5f;
-
         hudCanvas.AddComponent<GraphicRaycaster>();
 
-        // HP
+        // ─── HP ──────────────────────────────────────────────────────
         MakeBar("HP", hudCanvas.transform,
             new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
             new Vector2(hpOffsetX, -hpOffsetY),
             hpBarWidth, hpBarHeight, hpBgColor, hpColor,
-            out hpFill, out _);
+            out hpFill);
 
-        // Alert
+        // ─── Mana — всегда видна, прямо под HP ───────────────────────
+        MakeBar("Mana", hudCanvas.transform,
+            new Vector2(0, 1), new Vector2(0, 1), new Vector2(0, 1),
+            new Vector2(manaOffsetX, -manaOffsetY),
+            manaBarWidth, manaBarHeight, manaBgColor, manaColor,
+            out manaFill);
+
+        // ─── Alert ───────────────────────────────────────────────────
         var alertGO = new GameObject("AlertIcon");
         alertGO.transform.SetParent(hudCanvas.transform, false);
         var alertRT = alertGO.AddComponent<RectTransform>();
@@ -138,7 +155,7 @@ public class PlayerHUD : MonoBehaviour
         alertIcon = alertGO.AddComponent<Image>();
         alertIcon.color = alertNone;
 
-        // Stamina
+        // ─── Stamina — по центру снизу, скрывается когда полная ──────
         var staminaRoot = new GameObject("StaminaRoot");
         staminaRoot.transform.SetParent(hudCanvas.transform, false);
         staminaGroup = staminaRoot.AddComponent<CanvasGroup>();
@@ -148,9 +165,8 @@ public class PlayerHUD : MonoBehaviour
             new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0),
             new Vector2(staminaOffsetX, staminaOffsetY),
             staminaBarWidth, staminaBarHeight, staminaBgColor, staminaColor,
-            out staminaFill, out _);
+            out staminaFill);
 
-        // Weapon icons
         BuildWeaponIcons();
     }
 
@@ -166,38 +182,30 @@ public class PlayerHUD : MonoBehaviour
         rightRT.anchoredPosition = new Vector2(-rightIconOffsetX, rightIconOffsetY);
         rightRoot.AddComponent<Image>().color = weaponIconBgColor;
 
-        GameObject rBorder = new GameObject("Border");
-        rBorder.transform.SetParent(rightRoot.transform, false);
+        var rBorder = new GameObject("Border"); rBorder.transform.SetParent(rightRoot.transform, false);
         var rBorderRT = rBorder.AddComponent<RectTransform>();
         rBorderRT.anchorMin = Vector2.zero; rBorderRT.anchorMax = Vector2.one;
         rBorderRT.offsetMin = rBorderRT.offsetMax = Vector2.zero;
         rBorder.AddComponent<Image>().color = weaponIconBorderColor;
 
-        GameObject rIcon = new GameObject("Icon");
-        rIcon.transform.SetParent(rightRoot.transform, false);
+        var rIcon = new GameObject("Icon"); rIcon.transform.SetParent(rightRoot.transform, false);
         var rIconRT = rIcon.AddComponent<RectTransform>();
-        rIconRT.anchorMin = new Vector2(0.08f, 0.08f);
-        rIconRT.anchorMax = new Vector2(0.92f, 0.92f);
+        rIconRT.anchorMin = new Vector2(0.08f, 0.08f); rIconRT.anchorMax = new Vector2(0.92f, 0.92f);
         rIconRT.offsetMin = rIconRT.offsetMax = Vector2.zero;
-        weaponIconRight = rIcon.AddComponent<Image>();
-        weaponIconRight.color = weaponIconEmptyColor;
+        weaponIconRight = rIcon.AddComponent<Image>(); weaponIconRight.color = weaponIconEmptyColor;
 
-        GameObject rLetterGO = new GameObject("Letter");
-        rLetterGO.transform.SetParent(rightRoot.transform, false);
+        var rLetterGO = new GameObject("Letter"); rLetterGO.transform.SetParent(rightRoot.transform, false);
         var rLetterRT = rLetterGO.AddComponent<RectTransform>();
         rLetterRT.anchorMin = Vector2.zero; rLetterRT.anchorMax = Vector2.one;
         rLetterRT.offsetMin = rLetterRT.offsetMax = Vector2.zero;
         weaponLetterRight = rLetterGO.AddComponent<Text>();
         weaponLetterRight.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        weaponLetterRight.fontSize = weaponLetterFontSize;
-        weaponLetterRight.fontStyle = FontStyle.Bold;
-        weaponLetterRight.color = Color.white;
-        weaponLetterRight.alignment = TextAnchor.MiddleCenter;
+        weaponLetterRight.fontSize = weaponLetterFontSize; weaponLetterRight.fontStyle = FontStyle.Bold;
+        weaponLetterRight.color = Color.white; weaponLetterRight.alignment = TextAnchor.MiddleCenter;
 
         AddText(rightRoot.transform, "ПР", weaponLabelFontSize,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -weaponLabelFontSize - 2),
-            new Vector2(0, weaponLabelFontSize + 2));
+            new Vector2(0, -weaponLabelFontSize - 2), new Vector2(0, weaponLabelFontSize + 2));
 
         // Левая рука
         GameObject leftRoot = new GameObject("WeaponIconLeft");
@@ -209,49 +217,43 @@ public class PlayerHUD : MonoBehaviour
         leftRT.anchoredPosition = new Vector2(leftIconOffsetX, leftIconOffsetY);
         leftRoot.AddComponent<Image>().color = weaponIconBgColor;
 
-        GameObject lBorder = new GameObject("Border");
-        lBorder.transform.SetParent(leftRoot.transform, false);
+        var lBorder = new GameObject("Border"); lBorder.transform.SetParent(leftRoot.transform, false);
         var lBorderRT = lBorder.AddComponent<RectTransform>();
         lBorderRT.anchorMin = Vector2.zero; lBorderRT.anchorMax = Vector2.one;
         lBorderRT.offsetMin = lBorderRT.offsetMax = Vector2.zero;
         lBorder.AddComponent<Image>().color = weaponIconBorderColor;
 
-        GameObject lIcon = new GameObject("Icon");
-        lIcon.transform.SetParent(leftRoot.transform, false);
+        var lIcon = new GameObject("Icon"); lIcon.transform.SetParent(leftRoot.transform, false);
         var lIconRT = lIcon.AddComponent<RectTransform>();
-        lIconRT.anchorMin = new Vector2(0.08f, 0.08f);
-        lIconRT.anchorMax = new Vector2(0.92f, 0.92f);
+        lIconRT.anchorMin = new Vector2(0.08f, 0.08f); lIconRT.anchorMax = new Vector2(0.92f, 0.92f);
         lIconRT.offsetMin = lIconRT.offsetMax = Vector2.zero;
-        weaponIconLeft = lIcon.AddComponent<Image>();
-        weaponIconLeft.color = weaponIconEmptyColor;
+        weaponIconLeft = lIcon.AddComponent<Image>(); weaponIconLeft.color = weaponIconEmptyColor;
 
-        GameObject lLetterGO = new GameObject("Letter");
-        lLetterGO.transform.SetParent(leftRoot.transform, false);
+        var lLetterGO = new GameObject("Letter"); lLetterGO.transform.SetParent(leftRoot.transform, false);
         var lLetterRT = lLetterGO.AddComponent<RectTransform>();
         lLetterRT.anchorMin = Vector2.zero; lLetterRT.anchorMax = Vector2.one;
         lLetterRT.offsetMin = lLetterRT.offsetMax = Vector2.zero;
         weaponLetterLeft = lLetterGO.AddComponent<Text>();
         weaponLetterLeft.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        weaponLetterLeft.fontSize = weaponLetterFontSize;
-        weaponLetterLeft.fontStyle = FontStyle.Bold;
-        weaponLetterLeft.color = Color.white;
-        weaponLetterLeft.alignment = TextAnchor.MiddleCenter;
+        weaponLetterLeft.fontSize = weaponLetterFontSize; weaponLetterLeft.fontStyle = FontStyle.Bold;
+        weaponLetterLeft.color = Color.white; weaponLetterLeft.alignment = TextAnchor.MiddleCenter;
 
         AddText(leftRoot.transform, "ЛЕВ", weaponLabelFontSize,
             new Vector2(0, 0), new Vector2(1, 0),
-            new Vector2(0, -weaponLabelFontSize - 2),
-            new Vector2(0, weaponLabelFontSize + 2));
+            new Vector2(0, -weaponLabelFontSize - 2), new Vector2(0, weaponLabelFontSize + 2));
     }
 
     void Update()
     {
         UpdateHP();
+        UpdateMana();
         UpdateStamina();
         UpdateWeaponIcons();
         UpdateAlert();
 
         if (handController == null) handController = FindAnyObjectByType<HandController>();
         if (inventory == null) inventory = FindAnyObjectByType<Inventory>();
+        if (playerMana == null) playerMana = FindAnyObjectByType<PlayerMana>();
     }
 
     void UpdateHP()
@@ -259,6 +261,13 @@ public class PlayerHUD : MonoBehaviour
         if (playerHealth == null || hpFill == null) return;
         float pct = Mathf.Clamp01((float)playerHealth.currentHealth / playerHealth.maxHealth);
         hpFill.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, hpBarWidth * pct);
+    }
+
+    void UpdateMana()
+    {
+        if (playerMana == null || manaFill == null) return;
+        float pct = Mathf.Clamp01(playerMana.currentMana / playerMana.maxMana);
+        manaFill.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, manaBarWidth * pct);
     }
 
     void UpdateStamina()
@@ -281,18 +290,40 @@ public class PlayerHUD : MonoBehaviour
         if (inventory == null) return;
 
         Item rightWeapon = inventory.GetEquippedItem("Weapon");
+        SpellDefinition rightSpell = inventory.GetEquippedSpell("Weapon");
+
         if (weaponIconRight != null)
         {
-            weaponIconRight.color = rightWeapon != null ? weaponIconFilledColor : weaponIconEmptyColor;
-            if (weaponLetterRight != null)
-                weaponLetterRight.text = rightWeapon != null && !string.IsNullOrEmpty(rightWeapon.itemName)
-                    ? rightWeapon.itemName[0].ToString() : "";
+            if (rightSpell != null)
+            {
+                weaponIconRight.color = rightSpell.projectileColor;
+                if (weaponLetterRight != null) weaponLetterRight.text = rightSpell.spellName[0].ToString();
+            }
+            else if (rightWeapon != null)
+            {
+                weaponIconRight.color = weaponIconFilledColor;
+                if (weaponLetterRight != null)
+                    weaponLetterRight.text = !string.IsNullOrEmpty(rightWeapon.itemName)
+                        ? rightWeapon.itemName[0].ToString() : "";
+            }
+            else
+            {
+                weaponIconRight.color = weaponIconEmptyColor;
+                if (weaponLetterRight != null) weaponLetterRight.text = "";
+            }
         }
 
         Item leftItem = inventory.GetEquippedItem("WeaponLeft");
+        SpellDefinition leftSpell = inventory.GetEquippedSpell("WeaponLeft");
+
         if (weaponIconLeft != null)
         {
-            if (leftItem != null)
+            if (leftSpell != null)
+            {
+                weaponIconLeft.color = leftSpell.projectileColor;
+                if (weaponLetterLeft != null) weaponLetterLeft.text = leftSpell.spellName[0].ToString();
+            }
+            else if (leftItem != null)
             {
                 weaponIconLeft.color = leftItem.itemType == "Shield"
                     ? weaponIconShieldColor : weaponIconFilledColor;
@@ -326,26 +357,21 @@ public class PlayerHUD : MonoBehaviour
     void MakeBar(string name, Transform parent,
                  Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot, Vector2 pos,
                  float width, float height, Color bgColor, Color fillColor,
-                 out RectTransform fillRT, out CanvasGroup group)
+                 out RectTransform fillRT)
     {
-        group = null;
-
-        var bg = new GameObject(name + "Bg");
-        bg.transform.SetParent(parent, false);
+        var bg = new GameObject(name + "Bg"); bg.transform.SetParent(parent, false);
         var bgRT = bg.AddComponent<RectTransform>();
         bgRT.anchorMin = anchorMin; bgRT.anchorMax = anchorMax; bgRT.pivot = pivot;
         bgRT.sizeDelta = new Vector2(width, height); bgRT.anchoredPosition = pos;
         bg.AddComponent<Image>().color = bgColor;
 
-        var fill = new GameObject(name + "Fill");
-        fill.transform.SetParent(parent, false);
+        var fill = new GameObject(name + "Fill"); fill.transform.SetParent(parent, false);
         var fRT = fill.AddComponent<RectTransform>();
         fRT.anchorMin = anchorMin; fRT.anchorMax = anchorMax;
         fRT.pivot = new Vector2(anchorMin.x == 0.5f ? 0 : pivot.x, pivot.y);
         fRT.sizeDelta = new Vector2(width, height);
         fRT.anchoredPosition = anchorMin.x == 0.5f
-            ? new Vector2(pos.x - width * 0.5f, pos.y)
-            : pos;
+            ? new Vector2(pos.x - width * 0.5f, pos.y) : pos;
         fill.AddComponent<Image>().color = fillColor;
         fillRT = fRT;
     }
@@ -353,17 +379,13 @@ public class PlayerHUD : MonoBehaviour
     void AddText(Transform parent, string text, int fontSize,
                  Vector2 anchorMin, Vector2 anchorMax, Vector2 pos, Vector2 size)
     {
-        var go = new GameObject("Label_" + text);
-        go.transform.SetParent(parent, false);
+        var go = new GameObject("Label_" + text); go.transform.SetParent(parent, false);
         var rt = go.AddComponent<RectTransform>();
         rt.anchorMin = anchorMin; rt.anchorMax = anchorMax;
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.sizeDelta = size; rt.anchoredPosition = pos;
+        rt.pivot = new Vector2(0.5f, 1f); rt.sizeDelta = size; rt.anchoredPosition = pos;
         var t = go.AddComponent<Text>();
-        t.text = text;
-        t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        t.fontSize = fontSize;
-        t.color = new Color(0.6f, 0.6f, 0.7f);
+        t.text = text; t.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.fontSize = fontSize; t.color = new Color(0.6f, 0.6f, 0.7f);
         t.alignment = TextAnchor.MiddleCenter;
     }
 }
