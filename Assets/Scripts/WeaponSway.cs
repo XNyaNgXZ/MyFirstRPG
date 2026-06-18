@@ -2,55 +2,53 @@
 
 public class WeaponSway : MonoBehaviour
 {
-    [Header("Инерция от мыши")]
-    public float swayAmount = 0.02f;
-    public float maxSwayAmount = 0.06f;
-    public float smoothAmount = 6f;
-
-    [Header("Инерция от движения WASD")]
-    public float moveSwayAmount = 0.04f;
-    public float maxMoveSwayAmount = 0.08f;
-    public float moveSmoothAmount = 5f;
+    [Header("Инерция от мыши (Lunacid стиль)")]
+    public float swaySpeed = 2f;
+    public float swayReturnSpeed = 0.5f;
+    public float maxSwayX = 0.12f;
+    public float maxSwayY = 0.08f;
+    public float mouseSensitivity = 0.003f;
 
     private Vector3 initialPosition;
-    private PlayerMovement playerMovement;
+    private Vector2 currentSway;
+    private Vector2 targetSway;
 
     void Start()
     {
         initialPosition = transform.localPosition;
-        playerMovement = GetComponentInParent<PlayerMovement>();
     }
 
     void Update()
     {
         if (InventoryUICode.IsOpen || EquipmentUI.IsOpen)
         {
+            targetSway = Vector2.Lerp(targetSway, Vector2.zero, Time.deltaTime * swayReturnSpeed);
+            currentSway = Vector2.Lerp(currentSway, targetSway, Time.deltaTime * swaySpeed * 10f);
             transform.localPosition = Vector3.Lerp(
-                transform.localPosition, initialPosition, Time.deltaTime * smoothAmount);
+                transform.localPosition, initialPosition, Time.deltaTime * swayReturnSpeed);
             return;
         }
 
-        float mouseX = -Input.GetAxis("Mouse X") * swayAmount;
-        float mouseY = -Input.GetAxis("Mouse Y") * swayAmount;
-        mouseX = Mathf.Clamp(mouseX, -maxSwayAmount, maxSwayAmount);
-        mouseY = Mathf.Clamp(mouseY, -maxSwayAmount, maxSwayAmount);
+        float mouseX = Input.GetAxis("Mouse X");
+        float mouseY = Input.GetAxis("Mouse Y");
+        bool mouseMoving = Mathf.Abs(mouseX) > 0.01f || Mathf.Abs(mouseY) > 0.01f;
 
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        Vector2 moveDir = new Vector2(h, v);
-        if (moveDir.magnitude > 1f) moveDir.Normalize();
+        if (mouseMoving)
+        {
+            targetSway.x -= mouseX * mouseSensitivity * swaySpeed * 50f;
+            targetSway.y -= mouseY * mouseSensitivity * swaySpeed * 50f;
+            targetSway.x = Mathf.Clamp(targetSway.x, -maxSwayX, maxSwayX);
+            targetSway.y = Mathf.Clamp(targetSway.y, -maxSwayY, maxSwayY);
+        }
+        else
+        {
+            targetSway = Vector2.Lerp(targetSway, Vector2.zero, Time.deltaTime * swayReturnSpeed);
+        }
 
-        float moveSwayX = -moveDir.x * moveSwayAmount;
-        float moveSwayZ = moveDir.y * moveSwayAmount;
-        float moveSwayY = -Mathf.Abs(moveDir.magnitude) * moveSwayAmount * 0.3f;
-        moveSwayX = Mathf.Clamp(moveSwayX, -maxMoveSwayAmount, maxMoveSwayAmount);
-        moveSwayZ = Mathf.Clamp(moveSwayZ, -maxMoveSwayAmount, maxMoveSwayAmount);
+        currentSway = Vector2.Lerp(currentSway, targetSway, Time.deltaTime * swaySpeed * 10f);
 
-        Vector3 mouseSway = new Vector3(mouseX, mouseY, 0f);
-        Vector3 moveSway = new Vector3(moveSwayX, moveSwayY, moveSwayZ);
-        Vector3 targetPosition = initialPosition + mouseSway + moveSway;
-
+        Vector3 targetPosition = initialPosition + new Vector3(currentSway.x, currentSway.y, 0f);
         transform.localPosition = Vector3.Lerp(
-            transform.localPosition, targetPosition, Time.deltaTime * smoothAmount);
+            transform.localPosition, targetPosition, Time.deltaTime * swaySpeed * 10f);
     }
 }
