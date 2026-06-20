@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 20201, guid: 0000000000000000f000000000000000, type: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: e1bc243256a6756408f9affa787d0631, type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 62143841}
   - component: {fileID: 62143840}
   - component: {fileID: 62143844}
+  - component: {fileID: 62143846}
   - component: {fileID: 62143845}
   m_Layer: 0
   m_Name: Chest
@@ -260,10 +261,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 62143839}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &62143846
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 62143839}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &78369076
 GameObject:
   m_ObjectHideFlags: 0
@@ -281,7 +309,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &78369077
 Transform:
@@ -501,6 +529,7 @@ GameObject:
   - component: {fileID: 83621213}
   - component: {fileID: 83621212}
   - component: {fileID: 83621211}
+  - component: {fileID: 83621217}
   - component: {fileID: 83621216}
   m_Layer: 0
   m_Name: Ring 2
@@ -629,10 +658,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 83621210}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &83621217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 83621210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &83737371
 GameObject:
   m_ObjectHideFlags: 0
@@ -650,7 +706,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &83737372
 Transform:
@@ -762,7 +818,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &95047974
 Transform:
@@ -874,7 +930,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &181212675
 Transform:
@@ -986,7 +1042,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &195036036
 BoxCollider:
@@ -1098,7 +1154,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &208492753
 BoxCollider:
@@ -1572,11 +1628,11 @@ MonoBehaviour:
   weaponHitSound: {fileID: 8300000, guid: 055d12a6a1775f243a5a3d6318f3122d, type: 3}
   weaponMissSound: {fileID: 8300000, guid: a038d95c2dde9324a980374b8513ddda, type: 3}
   weaponWindUpSound: {fileID: 0}
-  bowDrawSound: {fileID: 8300000, guid: f1444c7d96c015446b6ce414fd3ce654, type: 3}
-  bowShootSound: {fileID: 8300000, guid: a454ba230662d0742889325e05f94a0b, type: 3}
+  bowDrawSound: {fileID: 0}
+  bowShootSound: {fileID: 0}
   spellCastSound: {fileID: 0}
   spellHealSound: {fileID: 0}
-  spellVolume: 0.25
+  spellVolume: 0.8
   hitVolume: 0.2
   missVolume: 0.2
   windUpVolume: 0.5
@@ -1898,7 +1954,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &347249815
 Transform:
@@ -2006,6 +2062,7 @@ GameObject:
   - component: {fileID: 353982506}
   - component: {fileID: 353982505}
   - component: {fileID: 353982509}
+  - component: {fileID: 353982511}
   - component: {fileID: 353982510}
   m_Layer: 0
   m_Name: Helmet
@@ -2134,10 +2191,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 353982504}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &353982511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 353982504}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &393946490
 GameObject:
   m_ObjectHideFlags: 0
@@ -2155,7 +2239,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &393946491
 Transform:
@@ -2267,7 +2351,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &399429432
 Transform:
@@ -2611,9 +2695,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -7148229082447015837, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+    - {fileID: 7169583190458024748, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2011750163}
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2011750162}
   m_SourcePrefab: {fileID: 100100000, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
 --- !u!1 &439082904
 GameObject:
@@ -2861,9 +2952,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -7148229082447015837, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+    - {fileID: 7169583190458024748, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1048309478}
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1048309477}
   m_SourcePrefab: {fileID: 100100000, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
 --- !u!1 &457939198
 GameObject:
@@ -2878,6 +2976,7 @@ GameObject:
   - component: {fileID: 457939202}
   - component: {fileID: 457939201}
   - component: {fileID: 457939200}
+  - component: {fileID: 457939205}
   - component: {fileID: 457939204}
   m_Layer: 0
   m_Name: Leather Chest
@@ -3006,10 +3105,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 457939198}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &457939205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 457939198}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &471446215
 GameObject:
   m_ObjectHideFlags: 0
@@ -3023,6 +3149,7 @@ GameObject:
   - component: {fileID: 471446219}
   - component: {fileID: 471446218}
   - component: {fileID: 471446217}
+  - component: {fileID: 471446222}
   - component: {fileID: 471446221}
   m_Layer: 0
   m_Name: Dagger
@@ -3151,10 +3278,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 471446215}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &471446222
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 471446215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &474754888
 GameObject:
   m_ObjectHideFlags: 0
@@ -3168,6 +3322,7 @@ GameObject:
   - component: {fileID: 474754890}
   - component: {fileID: 474754889}
   - component: {fileID: 474754893}
+  - component: {fileID: 474754895}
   - component: {fileID: 474754894}
   m_Layer: 0
   m_Name: Boots
@@ -3296,10 +3451,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 474754888}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &474754895
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 474754888}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &477982564
 GameObject:
   m_ObjectHideFlags: 0
@@ -3313,6 +3495,7 @@ GameObject:
   - component: {fileID: 477982566}
   - component: {fileID: 477982565}
   - component: {fileID: 477982569}
+  - component: {fileID: 477982571}
   - component: {fileID: 477982570}
   m_Layer: 0
   m_Name: Shield
@@ -3441,10 +3624,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 477982564}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &477982571
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 477982564}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &499509448
 GameObject:
   m_ObjectHideFlags: 0
@@ -3458,7 +3668,8 @@ GameObject:
   - component: {fileID: 499509453}
   - component: {fileID: 499509452}
   - component: {fileID: 499509451}
-  - component: {fileID: 499509450}
+  - component: {fileID: 499509456}
+  - component: {fileID: 499509455}
   m_Layer: 0
   m_Name: Mana Potion
   m_TagString: Item
@@ -3481,19 +3692,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 812124261}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &499509450
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 499509448}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
 --- !u!114 &499509451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3590,6 +3788,46 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 499509448}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &499509455
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 499509448}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &499509456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 499509448}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &534915973
 GameObject:
   m_ObjectHideFlags: 0
@@ -3607,7 +3845,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &534915974
 Transform:
@@ -3715,7 +3953,8 @@ GameObject:
   - component: {fileID: 551485642}
   - component: {fileID: 551485641}
   - component: {fileID: 551485640}
-  - component: {fileID: 551485639}
+  - component: {fileID: 551485646}
+  - component: {fileID: 551485645}
   m_Layer: 0
   m_Name: Bow
   m_TagString: Item
@@ -3723,19 +3962,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &551485639
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 551485638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
 --- !u!114 &551485640
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3847,6 +4073,46 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &551485645
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551485638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &551485646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 551485638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &583807709
 GameObject:
   m_ObjectHideFlags: 0
@@ -3864,7 +4130,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &583807710
 Transform:
@@ -3972,6 +4238,8 @@ GameObject:
   - component: {fileID: 615379302}
   - component: {fileID: 615379301}
   - component: {fileID: 615379300}
+  - component: {fileID: 615379306}
+  - component: {fileID: 615379305}
   m_Layer: 0
   m_Name: IceArrow Spell
   m_TagString: Item
@@ -4085,6 +4353,46 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &615379305
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615379299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &615379306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 615379299}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &649709176
 GameObject:
   m_ObjectHideFlags: 0
@@ -4228,12 +4536,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3da575d6eea544a4a83b924f4ae858cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponSway
-  swayAmount: 0.02
-  maxSwayAmount: 0.06
-  smoothAmount: 6
-  moveSwayAmount: 0.04
-  maxMoveSwayAmount: 0.08
-  moveSmoothAmount: 5
+  swaySpeed: 4
+  swayReturnSpeed: 8
+  maxSwayX: 0.12
+  maxSwayY: 0.08
+  mouseSensitivity: 0.015
 --- !u!114 &649709182
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4264,6 +4571,7 @@ GameObject:
   - component: {fileID: 673408376}
   - component: {fileID: 673408375}
   - component: {fileID: 673408379}
+  - component: {fileID: 673408381}
   - component: {fileID: 673408380}
   m_Layer: 0
   m_Name: Sword
@@ -4392,10 +4700,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 673408374}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &673408381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 673408374}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &686311962
 GameObject:
   m_ObjectHideFlags: 0
@@ -4413,7 +4748,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &686311963
 BoxCollider:
@@ -4628,12 +4963,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3da575d6eea544a4a83b924f4ae858cd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponSway
-  swayAmount: 0.2
-  maxSwayAmount: 0.4
-  smoothAmount: 5
-  moveSwayAmount: 0.04
-  maxMoveSwayAmount: 0.08
-  moveSmoothAmount: 5
+  swaySpeed: 0.5
+  swayReturnSpeed: 0.1
+  maxSwayX: 0.2
+  maxSwayY: 0.04
+  mouseSensitivity: 0.001
 --- !u!114 &741499911
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4669,6 +5003,7 @@ GameObject:
   - component: {fileID: 785326623}
   - component: {fileID: 785326622}
   - component: {fileID: 785326621}
+  - component: {fileID: 785326626}
   - component: {fileID: 785326625}
   m_Layer: 0
   m_Name: Leather Helmet
@@ -4797,10 +5132,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 785326619}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &785326626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 785326619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &812124260
 GameObject:
   m_ObjectHideFlags: 0
@@ -5161,7 +5523,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &823006729
 Transform:
@@ -5322,7 +5684,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &845697671
 BoxCollider:
@@ -5434,7 +5796,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &860149490
 Transform:
@@ -5771,9 +6133,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -7148229082447015837, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+    - {fileID: 7169583190458024748, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2118223978}
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2118223977}
   m_SourcePrefab: {fileID: 100100000, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
 --- !u!1 &939286467
 GameObject:
@@ -5789,7 +6158,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &939286468
 Transform:
@@ -5834,7 +6203,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &979183198
 Transform:
@@ -5946,7 +6315,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1003140247
 Transform:
@@ -6058,7 +6427,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1016369717
 Transform:
@@ -6153,6 +6522,51 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1016369716}
   m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!1 &1048309470 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+  m_PrefabInstance: {fileID: 442833040}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1048309477
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1048309470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1048309478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1048309470}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1094937400
 GameObject:
   m_ObjectHideFlags: 0
@@ -6199,6 +6613,7 @@ GameObject:
   - component: {fileID: 1095720545}
   - component: {fileID: 1095720544}
   - component: {fileID: 1095720543}
+  - component: {fileID: 1095720549}
   - component: {fileID: 1095720548}
   m_Layer: 0
   m_Name: Axe
@@ -6327,10 +6742,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1095720542}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1095720549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1095720542}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 90
+  bobHeight: 0.08
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1101559012
 GameObject:
   m_ObjectHideFlags: 0
@@ -6461,7 +6903,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1150681091
 Transform:
@@ -6614,9 +7056,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -7148229082447015837, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+    - {fileID: 7169583190458024748, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2115945662}
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2115945661}
   m_SourcePrefab: {fileID: 100100000, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
 --- !u!1 &1186191860
 GameObject:
@@ -6635,7 +7084,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1186191861
 Transform:
@@ -6792,7 +7241,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1245019646
 Transform:
@@ -7149,7 +7598,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1280095269
 Transform:
@@ -7302,6 +7751,7 @@ GameObject:
   - component: {fileID: 1304495232}
   - component: {fileID: 1304495231}
   - component: {fileID: 1304495230}
+  - component: {fileID: 1304495235}
   - component: {fileID: 1304495234}
   m_Layer: 0
   m_Name: 'Leather Legs '
@@ -7430,10 +7880,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1304495228}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1304495235
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1304495228}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1310427048
 GameObject:
   m_ObjectHideFlags: 0
@@ -7563,7 +8040,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1366336832
 Transform:
@@ -7706,7 +8183,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1403284134
 BoxCollider:
@@ -7818,7 +8295,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1430079111
 BoxCollider:
@@ -7930,7 +8407,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1430412365
 BoxCollider:
@@ -8042,7 +8519,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1480742482
 Transform:
@@ -8154,7 +8631,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1485066336
 BoxCollider:
@@ -8262,6 +8739,7 @@ GameObject:
   - component: {fileID: 1489343447}
   - component: {fileID: 1489343446}
   - component: {fileID: 1489343450}
+  - component: {fileID: 1489343452}
   - component: {fileID: 1489343451}
   m_Layer: 0
   m_Name: Amulet
@@ -8390,10 +8868,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1489343445}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1489343452
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1489343445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1515429574
 GameObject:
   m_ObjectHideFlags: 0
@@ -8407,6 +8912,8 @@ GameObject:
   - component: {fileID: 1515429577}
   - component: {fileID: 1515429576}
   - component: {fileID: 1515429575}
+  - component: {fileID: 1515429581}
+  - component: {fileID: 1515429580}
   m_Layer: 0
   m_Name: Heal Spell
   m_TagString: Item
@@ -8520,6 +9027,46 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1515429580
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515429574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1515429581
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1515429574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1573169115
 GameObject:
   m_ObjectHideFlags: 0
@@ -8537,7 +9084,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1573169116
 Transform:
@@ -8649,7 +9196,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1580793041
 BoxCollider:
@@ -8757,6 +9304,7 @@ GameObject:
   - component: {fileID: 1600530068}
   - component: {fileID: 1600530067}
   - component: {fileID: 1600530071}
+  - component: {fileID: 1600530073}
   - component: {fileID: 1600530072}
   m_Layer: 0
   m_Name: Heal Potion
@@ -8885,10 +9433,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1600530066}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1600530073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1600530066}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1642953159
 GameObject:
   m_ObjectHideFlags: 0
@@ -8902,6 +9477,8 @@ GameObject:
   - component: {fileID: 1642953162}
   - component: {fileID: 1642953161}
   - component: {fileID: 1642953160}
+  - component: {fileID: 1642953166}
+  - component: {fileID: 1642953165}
   m_Layer: 0
   m_Name: Fireball Spell
   m_TagString: Item
@@ -9015,6 +9592,46 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1642953165
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642953159}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1642953166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1642953159}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1664341733
 GameObject:
   m_ObjectHideFlags: 0
@@ -9029,7 +9646,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1664341734
 Transform:
@@ -9074,7 +9691,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!65 &1728594147
 BoxCollider:
@@ -9214,6 +9831,7 @@ GameObject:
   - component: {fileID: 1750211591}
   - component: {fileID: 1750211590}
   - component: {fileID: 1750211594}
+  - component: {fileID: 1750211596}
   - component: {fileID: 1750211595}
   m_Layer: 0
   m_Name: Legs
@@ -9342,10 +9960,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1750211589}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1750211596
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1750211589}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1752569867
 GameObject:
   m_ObjectHideFlags: 0
@@ -9363,7 +10008,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1752569868
 Transform:
@@ -9471,6 +10116,7 @@ GameObject:
   - component: {fileID: 1784646810}
   - component: {fileID: 1784646809}
   - component: {fileID: 1784646813}
+  - component: {fileID: 1784646815}
   - component: {fileID: 1784646814}
   m_Layer: 0
   m_Name: Ring 1
@@ -9599,10 +10245,37 @@ MonoBehaviour:
   m_GameObject: {fileID: 1784646808}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1784646815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1784646808}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &1809896724
 GameObject:
   m_ObjectHideFlags: 0
@@ -9620,7 +10293,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1809896725
 Transform:
@@ -9732,7 +10405,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!4 &1811306548
 Transform:
@@ -9844,7 +10517,7 @@ GameObject:
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
+  m_StaticEditorFlags: 2147483647
   m_IsActive: 1
 --- !u!64 &1871692664
 MeshCollider:
@@ -10144,6 +10817,7 @@ GameObject:
   - component: {fileID: 1985329195}
   - component: {fileID: 1985329194}
   - component: {fileID: 1985329193}
+  - component: {fileID: 1985329198}
   - component: {fileID: 1985329197}
   m_Layer: 0
   m_Name: Leather Boots
@@ -10272,10 +10946,82 @@ MonoBehaviour:
   m_GameObject: {fileID: 1985329191}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 226e0417c871dad448f6406ce0e8eb99, type: 3}
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ItemSettle
-  settleDelay: 3.5
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &1985329198
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1985329191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!1 &2011750155 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+  m_PrefabInstance: {fileID: 435379103}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2011750162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2011750155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &2011750163
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2011750155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1 &2021091724
 GameObject:
   m_ObjectHideFlags: 0
@@ -10310,6 +11056,141 @@ Transform:
   - {fileID: 1276069280}
   m_Father: {fileID: 331121096}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2115945654 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+  m_PrefabInstance: {fileID: 1160594927}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2115945661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2115945654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &2115945662
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2115945654}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!1 &2118223970 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+  m_PrefabInstance: {fileID: 932850240}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2118223977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2118223970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &2118223978
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2118223970}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!1 &2136706612 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+  m_PrefabInstance: {fileID: 8250481121228991356}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2136706619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136706612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 001bfbfce39367d43b1cbdf50441606d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BlobShadow
+  shadowAlpha: 0.6
+  shadowScale: 1.5
+  heightOffset: 0.05
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
+--- !u!114 &2136706620
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2136706612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 186993fc66c784643aff9723408a5fb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemFloat
+  rotateSpeed: 45
+  bobHeight: 0.04
+  bobSpeed: 2
+  applyThrow: 0
+  throwForce: 1.5
+  bounceTime: 0.8
+  floatHeight: 0.4
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 4294967295
 --- !u!1001 &8250481121228991356
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -10368,9 +11249,16 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: -7148229082447015837, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+    - {fileID: 7169583190458024748, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2136706620}
+    - targetCorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2136706619}
   m_SourcePrefab: {fileID: 100100000, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:

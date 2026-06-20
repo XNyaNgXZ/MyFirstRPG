@@ -410,7 +410,8 @@ public class InventoryUICode : MonoBehaviour
         qr.offsetMin = new Vector2(3, 3); qr.offsetMax = new Vector2(-3, 0);
         var qt = qGO.AddComponent<Text>();
         qt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        qt.fontSize = 11; qt.color = new Color(1, 1, 0.6f, 0.9f);
+        qt.fontSize = 16; qt.fontStyle = FontStyle.Bold;
+        qt.color = new Color(1, 1, 0.5f, 1f);
         qt.alignment = TextAnchor.LowerRight;
 
         slotGOs[index] = go; slotIcons[index] = iconImg;
@@ -717,10 +718,10 @@ public class InventoryUICode : MonoBehaviour
             if (ec != null && col != null) Physics.IgnoreCollision(col, ec);
         }
 
-        var rb = drop.AddComponent<Rigidbody>();
-        rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
-        var freezer = drop.AddComponent<ItemFreezer>();
-        freezer.delay = dropFreezeDelay;
+        // ✅ Парящий предмет как в Lunacid
+        // ✅ Lunacid стиль — бросок вперёд, отскок, потом парение
+        ItemFloat.AddToDropped(drop);
+        drop.AddComponent<BlobShadow>();
     }
 
     public void RefreshSlots()

@@ -81,10 +81,8 @@ public class ItemHighlighter : MonoBehaviour
                     if (data != null)
                     {
                         itemName = data.Name;
-                        // ✅ Показываем количество если стакаемый предмет
-                        string t = data.Type;
-                        bool stackable = t == "Arrow" || t == "Potion" || t == "ManaPotion";
-                        if (stackable && data.Value > 1)
+                        // ✅ Количество только для стрел — у зелий Value это сила лечения
+                        if (data.Type == "Arrow" && data.Value > 1)
                             itemName += $" x{data.Value}";
                     }
                     else itemName = hit.collider.name;

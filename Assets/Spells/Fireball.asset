@@ -23,6 +23,8 @@ MonoBehaviour:
   projectileColor: {r: 1, g: 0.4, b: 0.1, a: 1}
   projectileSize: 0.18
   icon: {fileID: 0}
+  projectileParticles: {fileID: 5783301077099886653, guid: a0abae4e2cbd39a44ad4d128b01b6d70, type: 3}
+  impactParticles: {fileID: 0}
   castSound: {fileID: 8300000, guid: 46050371918b45c4f9978a1429ff0b4c, type: 3}
   impactSound: {fileID: 8300000, guid: fda2f351c12793e42b60f84ddca7aed1, type: 3}
   chargeSound: {fileID: 0}

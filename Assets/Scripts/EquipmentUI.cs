@@ -323,10 +323,9 @@ public class EquipmentUI : MonoBehaviour
             if (ec != null && col != null) Physics.IgnoreCollision(col, ec);
         }
 
-        var rb = drop.AddComponent<Rigidbody>();
-        rb.AddForce(throwDir * throwForce, ForceMode.Impulse);
-        var freezer = drop.AddComponent<ItemFreezer>();
-        freezer.delay = dropFreezeDelay;
+        // ✅ Lunacid стиль — бросок вперёд, отскок, потом парение
+        ItemFloat.AddToDropped(drop);
+        drop.AddComponent<BlobShadow>();
     }
 
     Color GetItemColor(Item item)

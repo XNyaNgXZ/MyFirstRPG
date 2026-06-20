@@ -41,7 +41,6 @@ Shader "Custom/Lunacid"
         }
         LOD 100
 
-        // ── Основной проход ───────────────────────────────────────────────
         Pass
         {
             Name "ForwardLit"
@@ -50,7 +49,6 @@ Shader "Custom/Lunacid"
             HLSLPROGRAM
             #pragma vertex   vert
             #pragma fragment frag
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -65,21 +63,21 @@ Shader "Custom/Lunacid"
 
             struct Varyings
             {
-                float3 worldPos : TEXCOORD5;
-                float3 normalWS : TEXCOORD6;
                 float4 positionCS  : SV_POSITION;
-                float2 uv          : TEXCOORD0;   // аффинные UV (умножены на W)
-                float  clipW       : TEXCOORD1;   // W для восстановления UV
-                float3 vertexLight : TEXCOORD2;   // Per-vertex освещение
+                float2 uv          : TEXCOORD0;
+                float  clipW       : TEXCOORD1;
+                float3 vertexLight : TEXCOORD2;
                 float  fogFactor   : TEXCOORD3;
+                float3 worldPos    : TEXCOORD4;
+                float3 normalWS    : TEXCOORD5;
             };
 
             TEXTURE2D(_MainTex);
             SAMPLER(sampler_MainTex);
 
             CBUFFER_START(UnityPerMaterial)
-                float _WorldUV;
-                float _WorldUVScale;
+                float  _WorldUV;
+                float  _WorldUVScale;
                 float4 _MainTex_ST;
                 float4 _Color;
                 float  _SnapStrength;
@@ -94,7 +92,6 @@ Shader "Custom/Lunacid"
                 float  _FogEnd;
             CBUFFER_END
 
-            // ── Матрица Байера 4×4 ────────────────────────────────────────
             static const float BayerMatrix[16] =
             {
                  0.0/16.0,  8.0/16.0,  2.0/16.0, 10.0/16.0,
@@ -114,42 +111,39 @@ Shader "Custom/Lunacid"
             {
                 Varyings OUT;
 
-                // ── Vertex Snap (вершинный джиттер PS1) ──────────────────
+                // ── Vertex Snap (PS1 джиттер) ─────────────────────────────
                 float4 clipPos = TransformObjectToHClip(IN.positionOS.xyz);
                 float2 snapped = round(clipPos.xy / clipPos.w * _SnapStrength)
                                  / _SnapStrength * clipPos.w;
-                clipPos.xy = snapped;
+                clipPos.xy     = snapped;
                 OUT.positionCS = clipPos;
                 OUT.clipW      = clipPos.w;
 
-                // ── Affine Texture Mapping ────────────────────────────────
-                // PS1 не делал perspective-correct UV → текстуры «плывут»
                 float3 wPos    = TransformObjectToWorld(IN.positionOS.xyz);
                 float3 wNormal = TransformObjectToWorldNormal(IN.normalOS);
                 OUT.worldPos   = wPos;
                 OUT.normalWS   = wNormal;
 
-                // Стандартные UV оставляем как запасные
+                // ── Affine UV ─────────────────────────────────────────────
                 float2 uv = TRANSFORM_TEX(IN.uv, _MainTex);
                 OUT.uv    = lerp(uv, uv * clipPos.w, _AffineBlend);
 
-                // ── Per-vertex освещение (не per-pixel — как PS1) ─────────
-                float3 normalWS  = TransformObjectToWorldNormal(IN.normalOS);
-                float3 worldPos  = TransformObjectToWorld(IN.positionOS.xyz);
+                // ── Per-vertex освещение (без теней — только запечённое) ──
+                // Используем SampleSH для запечённого GI
+                float3 bakedGI  = SampleSH(wNormal);
 
-                // Основной источник
-                Light mainLight  = GetMainLight();
-                float NdotL      = saturate(dot(normalWS, mainLight.direction));
-                float3 lighting  = _AmbientColor.rgb
-                                 + mainLight.color * NdotL * _LightIntensity;
+                Light mainLight = GetMainLight();
+                float NdotL     = saturate(dot(wNormal, mainLight.direction));
+                float3 lighting = _AmbientColor.rgb
+                                + bakedGI
+                                + mainLight.color * NdotL * _LightIntensity;
 
-                // Дополнительные точечные источники (факелы, свечи)
             #ifdef _ADDITIONAL_LIGHTS_VERTEX
                 int lightCount = GetAdditionalLightsCount();
                 for (int i = 0; i < lightCount; i++)
                 {
-                    Light addLight = GetAdditionalLight(i, worldPos);
-                    float addNdotL = saturate(dot(normalWS, addLight.direction));
+                    Light addLight = GetAdditionalLight(i, wPos);
+                    float addNdotL = saturate(dot(wNormal, addLight.direction));
                     lighting += addLight.color * addLight.distanceAttenuation
                               * addNdotL * _LightIntensity;
                 }
@@ -158,38 +152,37 @@ Shader "Custom/Lunacid"
                 OUT.vertexLight = lighting;
 
                 // ── Туман ─────────────────────────────────────────────────
-                float dist       = distance(_WorldSpaceCameraPos, worldPos);
-                OUT.fogFactor    = saturate((dist - _FogStart) / (_FogEnd - _FogStart));
+                float dist    = distance(_WorldSpaceCameraPos, wPos);
+                OUT.fogFactor = saturate((dist - _FogStart) / (_FogEnd - _FogStart));
 
                 return OUT;
             }
 
             half4 frag(Varyings IN) : SV_Target
             {
-                // ── Восстанавливаем perspective-correct UV ────────────────
-float2 uv = lerp(IN.uv, IN.uv / IN.clipW, _AffineBlend);
+                // ── UV ────────────────────────────────────────────────────
+                float2 uv = lerp(IN.uv, IN.uv / IN.clipW, _AffineBlend);
 
-                // ✅ World Space UV — текстуры стыкуются между кусками стен
                 if (_WorldUV > 0.5)
                 {
                     float3 absN = abs(IN.normalWS);
                     float2 wuv;
                     if (absN.y > absN.x && absN.y > absN.z)
-                        wuv = IN.worldPos.xz;          // пол / потолок
+                        wuv = IN.worldPos.xz;
                     else if (absN.x > absN.z)
-                        wuv = IN.worldPos.zy;          // левая / правая стена
-                else
-                        wuv = IN.worldPos.xy;          // передняя / задняя стена
+                        wuv = IN.worldPos.zy;
+                    else
+                        wuv = IN.worldPos.xy;
                     uv = wuv * _WorldUVScale;
                 }
 
                 half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, uv);
-                col *= _Color;
+                col      *= _Color;
 
-                // ── Per-vertex освещение ───────────────────────────────────
-                col.rgb *= IN.vertexLight;
+                // ── Освещение (вертексное + запечённое GI) ────────────────
+                col.rgb  *= IN.vertexLight;
 
-                // ── Дизеринг (Bayer 4×4) ─────────────────────────────────
+                // ── Дизеринг ──────────────────────────────────────────────
                 if (_DitherStrength > 0.001)
                 {
                     float dither = GetDither(IN.positionCS.xy);
@@ -197,7 +190,7 @@ float2 uv = lerp(IN.uv, IN.uv / IN.clipW, _AffineBlend);
                     col.rgb      = saturate(col.rgb + bias);
                 }
 
-                // ── Снижение глубины цвета (ограниченная палитра) ─────────
+                // ── Глубина цвета ─────────────────────────────────────────
                 col.rgb = round(col.rgb * _ColorDepth) / _ColorDepth;
 
                 // ── Туман ─────────────────────────────────────────────────
@@ -207,39 +200,6 @@ float2 uv = lerp(IN.uv, IN.uv / IN.clipW, _AffineBlend);
             }
             ENDHLSL
         }
-
-        // ── Проход теней ──────────────────────────────────────────────────
-        Pass
-{
-    Name "ShadowCaster"
-    Tags { "LightMode" = "ShadowCaster" }
-    ZWrite On ZTest LEqual ColorMask 0
-
-    HLSLPROGRAM
-    #pragma vertex   shadowVert
-    #pragma fragment shadowFrag
-    #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
-    float3 _LightDirection;
-
-    struct ShadowAttr { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
-    struct ShadowVary { float4 positionCS : SV_POSITION; };
-
-    ShadowVary shadowVert(ShadowAttr IN)
-    {
-        ShadowVary OUT;
-        float3 worldPos    = TransformObjectToWorld(IN.positionOS.xyz);
-        float3 worldNormal = TransformObjectToWorldNormal(IN.normalOS);
-
-        // ✅ Без ApplyShadowBias — простой bias вручную
-        worldPos += worldNormal * 0.01;
-        OUT.positionCS = TransformWorldToHClip(worldPos);
-        return OUT;
-    }
-
-    half4 shadowFrag(ShadowVary IN) : SV_Target { return 0; }
-    ENDHLSL
-}
     }
 
     FallBack "Universal Render Pipeline/Lit"

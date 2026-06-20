@@ -20,10 +20,14 @@ public class SpellDefinition : ScriptableObject
     public float projectileSize = 0.18f;
     public Sprite icon;
 
+    [Header("Партикли")]
+    public GameObject projectileParticles; // партикли на снаряде (крутятся вместе с ним)
+    public GameObject impactParticles;     // партикли при попадании
+
     [Header("Звуки")]
-    public AudioClip castSound;     // звук при касте
-    public AudioClip impactSound;   // звук при попадании
-    public AudioClip chargeSound;   // звук зажатия (Heal)
+    public AudioClip castSound;
+    public AudioClip impactSound;
+    public AudioClip chargeSound;
 
     [Header("Книга или свиток")]
     public bool isBook = false;

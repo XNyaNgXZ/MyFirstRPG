@@ -99,7 +99,6 @@ public class EnemyNav : MonoBehaviour
     public DropEntry[] possibleDrops;
     [Range(0f, 100f)]
     public float dropChance = 80f;
-    public float dropFreezeDelay = 1.5f;
 
     private Renderer rend;
     private Color baseColor;
@@ -109,7 +108,6 @@ public class EnemyNav : MonoBehaviour
 
     private CharacterController playerCC;
 
-    // ✅ Grace period для зрения
     private float sightGraceTimer = 0f;
     private float sightGraceTime = 2f;
 
@@ -148,7 +146,6 @@ public class EnemyNav : MonoBehaviour
         ExecuteState();
     }
 
-    // ✅ Дистанция только по XZ
     float DistanceToPlayer()
     {
         Vector3 a = transform.position;
@@ -196,7 +193,6 @@ public class EnemyNav : MonoBehaviour
         bool isSprinting = playerMovement != null && playerMovement.isSprinting;
         float activeHearingRange = isSprinting ? hearingRangeSprint : hearingRange;
 
-        // ─── Слух ────────────────────────────────────────────────────────
         bool canHear = false;
         if (!isCrouching && distance <= activeHearingRange)
         {
@@ -207,7 +203,6 @@ public class EnemyNav : MonoBehaviour
                 canHear = hearHit.collider.CompareTag("Player");
         }
 
-        // ─── Зрение ──────────────────────────────────────────────────────
         bool canSee = false;
         if (distance <= detectionRange)
         {
@@ -219,29 +214,20 @@ public class EnemyNav : MonoBehaviour
             if (inPeripheral || inFOV)
             {
                 Vector3 sp = transform.position + Vector3.up * 0.5f;
-
-                // ✅ Берём реальный центр коллайдера игрока
                 Vector3 ccCenter = playerCC != null
                     ? player.TransformPoint(playerCC.center)
                     : player.position + Vector3.up * 0.9f;
 
                 Vector3 dir = (ccCenter - sp).normalized;
                 if (Physics.Raycast(sp, dir, out RaycastHit hit, detectionRange))
-                {
-                    if (hit.collider.CompareTag("Player"))
-                        canSee = true;
-                }
+                    if (hit.collider.CompareTag("Player")) canSee = true;
 
-                // ✅ Второй луч чуть ниже — для приседания
                 if (!canSee)
                 {
                     Vector3 lowTarget = player.position + Vector3.up * 0.1f;
                     Vector3 dir2 = (lowTarget - sp).normalized;
                     if (Physics.Raycast(sp, dir2, out RaycastHit hit2, detectionRange))
-                    {
-                        if (hit2.collider.CompareTag("Player"))
-                            canSee = true;
-                    }
+                        if (hit2.collider.CompareTag("Player")) canSee = true;
                 }
             }
         }
@@ -250,7 +236,6 @@ public class EnemyNav : MonoBehaviour
 
         if (detected)
         {
-            // ✅ Сбрасываем grace timer при обнаружении
             sightGraceTimer = sightGraceTime;
             detectionTimer += Time.deltaTime;
             lastKnownPosition = player.position;
@@ -269,7 +254,6 @@ public class EnemyNav : MonoBehaviour
         }
         else
         {
-            // ✅ Если игрок совсем рядом — всегда видим
             if (DistanceToPlayer() <= strafeRadius * 1.5f && hasLastKnownPosition)
             {
                 canSeePlayerNow = true;
@@ -383,7 +367,6 @@ public class EnemyNav : MonoBehaviour
             case State.Idle:
                 DoPatrol();
                 break;
-
             case State.Chasing:
                 agent.updateRotation = true;
                 agent.speed = moveSpeed;
@@ -391,11 +374,9 @@ public class EnemyNav : MonoBehaviour
                 agent.stoppingDistance = strafeRadius * 0.85f;
                 agent.SetDestination(canSeePlayerNow ? player.position : lastKnownPosition);
                 break;
-
             case State.Strafing:
                 DoStrafe();
                 break;
-
             case State.Searching:
                 float distToLast = Vector3.Distance(transform.position, lastKnownPosition);
                 if (distToLast > 1.2f)
@@ -416,7 +397,6 @@ public class EnemyNav : MonoBehaviour
                             searchTurnSpeed * Time.deltaTime);
                 }
                 break;
-
             case State.Telegraph:
             case State.Charging:
             case State.Attacking:
@@ -476,17 +456,17 @@ public class EnemyNav : MonoBehaviour
 
         Vector3 toEnemy = (transform.position - player.position).normalized;
         Vector3 strafeVec = Vector3.Cross(toEnemy, Vector3.up) * strafeDir;
-        Vector3 target = player.position + toEnemy * strafeRadius + strafeVec * 0.5f;
+        Vector3 target2 = player.position + toEnemy * strafeRadius + strafeVec * 0.5f;
 
         agent.speed = strafeSpeed;
         agent.isStopped = false;
-        agent.SetDestination(target);
+        agent.SetDestination(target2);
 
-        Vector3 lookDir = player.position - transform.position;
-        lookDir.y = 0;
-        if (lookDir != Vector3.zero)
+        Vector3 lookDir2 = player.position - transform.position;
+        lookDir2.y = 0;
+        if (lookDir2 != Vector3.zero)
             transform.rotation = Quaternion.Slerp(transform.rotation,
-                Quaternion.LookRotation(lookDir), 10f * Time.deltaTime);
+                Quaternion.LookRotation(lookDir2), 10f * Time.deltaTime);
     }
 
     IEnumerator TelegraphThenAttack(bool doCharge)
@@ -567,7 +547,7 @@ public class EnemyNav : MonoBehaviour
         agent.isStopped = false;
         agent.speed = retreatSpeed;
         agent.stoppingDistance = 0f;
-        agent.updateRotation = false; // ✅ отключаем авторотацию
+        agent.updateRotation = false;
 
         float elapsed = 0f;
         while (elapsed < retreatDuration)
@@ -583,7 +563,6 @@ public class EnemyNav : MonoBehaviour
                 if (NavMesh.SamplePosition(retreatTarget, out NavMeshHit hit, retreatDistance, -1))
                     agent.SetDestination(hit.position);
 
-                // ✅ Всегда смотрим на игрока
                 Vector3 lookDir = player.position - transform.position;
                 lookDir.y = 0;
                 if (lookDir != Vector3.zero)
@@ -596,7 +575,7 @@ public class EnemyNav : MonoBehaviour
 
         agent.speed = moveSpeed;
         agent.stoppingDistance = strafeRadius * 0.85f;
-        agent.updateRotation = true; // ✅ возвращаем авторотацию
+        agent.updateRotation = true;
         state = State.Strafing;
         SetStateVisual(State.Strafing);
     }
@@ -724,10 +703,17 @@ public class EnemyNav : MonoBehaviour
             if (ec != null) Physics.IgnoreCollision(col, ec);
         }
 
-        var rb = drop.AddComponent<Rigidbody>();
-        rb.AddForce(Vector3.up * 3f + Random.insideUnitSphere * 1.5f, ForceMode.Impulse);
-        var freezer = drop.AddComponent<ItemFreezer>();
-        freezer.delay = dropFreezeDelay;
+        // ✅ Случайное направление броска 360° — передаём в ItemFloat
+        float angle = Random.Range(0f, 360f) * Mathf.Deg2Rad;
+        Vector3 throwDir = new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)).normalized;
+
+        drop.AddComponent<BlobShadow>();
+
+        // ✅ ItemFloat добавляем первым, потом хелпер задаёт направление через Awake
+        var itemFloat = drop.AddComponent<ItemFloat>();
+        itemFloat.applyThrow = true;
+        itemFloat.throwForce = 3.5f;
+        itemFloat.customThrowDir = throwDir; // сразу задаём направление напрямую
     }
 
     public enum AlertLevel { None, Search, Chase }
@@ -758,7 +744,6 @@ public class EnemyNav : MonoBehaviour
         Gizmos.DrawRay(transform.position, leftDir * detectionRange);
         Gizmos.DrawRay(transform.position, rightDir * detectionRange);
         Gizmos.DrawWireSphere(transform.position, peripheralRange);
-
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, detectionRange);
     }

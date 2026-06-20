@@ -1,5 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
 
 public class HandController : MonoBehaviour
 {
@@ -101,8 +100,13 @@ public class HandController : MonoBehaviour
     private Vector3 pendingHitPoint;
     private bool isReceivingBlockHit = false;
 
+    // Магия
     private bool isHealingRight = false;
     private bool isHealingLeft = false;
+    private float healAccumulatorRight = 0f;
+    private float healAccumulatorLeft = 0f;
+    private GameObject healParticlesRight = null;
+    private GameObject healParticlesLeft = null;
 
     public static HandController Instance { get; private set; }
     void Awake() => Instance = this;
@@ -147,7 +151,7 @@ public class HandController : MonoBehaviour
         if (landingAttackTimer > 0f) landingAttackTimer -= Time.deltaTime;
         wasGroundedLastFrame = grounded;
 
-        // ─── Блок (ПКМ) со щитом ─────────────────────────────────────
+        // ─── Блок ────────────────────────────────────────────────────
         if (hasShield)
         {
             if (Input.GetMouseButtonDown(1)) blockQueued = true;
@@ -190,7 +194,6 @@ public class HandController : MonoBehaviour
                     {
                         isDrawingBow = true; bowDrawTimer = 0f;
                         twoHandAnimator?.SetTrigger("draw");
-                        // ✅ Зацикленный звук натяжения
                         if (bowDrawSound != null)
                         {
                             audioSource.clip = bowDrawSound;
@@ -199,15 +202,12 @@ public class HandController : MonoBehaviour
                             audioSource.Play();
                         }
                     }
-                    else Debug.Log("Нет стрел!");
                 }
                 if (Input.GetMouseButton(0) && isDrawingBow)
                     bowDrawTimer = Mathf.Min(bowDrawTimer + Time.deltaTime, bowMaxDrawTime);
                 if (Input.GetMouseButtonUp(0) && isDrawingBow)
                 {
-                    // ✅ Останавливаем звук натяжения
-                    audioSource.loop = false;
-                    audioSource.Stop();
+                    audioSource.loop = false; audioSource.Stop();
                     if (bowDrawTimer >= bowMinDrawTime && Time.time >= lastAttackTimeRight + attackCooldown)
                     {
                         ShootArrow(); twoHandAnimator?.SetTrigger("shoot");
@@ -248,10 +248,6 @@ public class HandController : MonoBehaviour
 
     // ─── Магия ───────────────────────────────────────────────────────
 
-    // Накопитель дробного хила
-    private float healAccumulatorRight = 0f;
-    private float healAccumulatorLeft = 0f;
-
     void HandleSpellInput(bool isRight, SpellDefinition spell, bool grounded,
                           ref bool isHealing, ref float lastAttackTime)
     {
@@ -265,7 +261,6 @@ public class HandController : MonoBehaviour
                 isHealing = mana != null && mana.HasMana(0.1f);
                 if (isHealing)
                 {
-                    // ✅ Запускаем зацикленный звук лечения
                     AudioClip healClip = spell.chargeSound != null ? spell.chargeSound : spellHealSound;
                     if (healClip != null)
                     {
@@ -274,6 +269,8 @@ public class HandController : MonoBehaviour
                         audioSource.volume = spellVolume * 0.5f;
                         audioSource.Play();
                     }
+                    if (spell.projectileParticles != null)
+                        SpawnHealParticles(spell.projectileParticles, isRight);
                 }
             }
 
@@ -283,9 +280,7 @@ public class HandController : MonoBehaviour
                 if (mana != null && mana.HasMana(cost))
                 {
                     mana.UseManaUnchecked(cost);
-
-                    // ✅ Накапливаем дробный хил и применяем целыми числами
-                    ref float acc = ref (isRight ? ref healAccumulatorRight : ref healAccumulatorLeft);
+                    float acc = isRight ? healAccumulatorRight : healAccumulatorLeft;
                     acc += spell.healPerSecond * Time.deltaTime;
                     int healAmount = Mathf.FloorToInt(acc);
                     if (healAmount > 0)
@@ -294,27 +289,29 @@ public class HandController : MonoBehaviour
                         PlayerHealth ph = GetComponent<PlayerHealth>();
                         if (ph != null) ph.Heal(healAmount);
                     }
+                    if (isRight) healAccumulatorRight = acc;
+                    else healAccumulatorLeft = acc;
                 }
                 else
                 {
                     isHealing = false;
-                    audioSource.loop = false;
-                    audioSource.Stop();
+                    audioSource.loop = false; audioSource.Stop();
+                    DestroyHealParticles(isRight);
                 }
             }
 
             if (Input.GetMouseButtonUp(mouseBtn))
             {
                 isHealing = false;
-                // ✅ Останавливаем звук при отпускании
-                audioSource.loop = false;
-                audioSource.Stop();
+                audioSource.loop = false; audioSource.Stop();
                 if (isRight) healAccumulatorRight = 0f;
                 else healAccumulatorLeft = 0f;
+                DestroyHealParticles(isRight);
             }
             return;
         }
 
+        // Снаряды
         if (Input.GetMouseButtonDown(mouseBtn) && grounded && Time.time >= lastAttackTime + attackCooldown)
         {
             if (mana != null && mana.UseMana(spell.manaCost))
@@ -341,8 +338,50 @@ public class HandController : MonoBehaviour
         if (castClip != null) audioSource.PlayOneShot(castClip, spellVolume);
     }
 
-    // ─── Оружие — логика как в Lunacid ───────────────────────────────
-    // Замах зажатием, удар при отпускании, можно сразу снова зажимать
+    void SpawnHealParticles(GameObject prefab, bool isRight)
+    {
+        if (isRight)
+        {
+            if (healParticlesRight != null) Destroy(healParticlesRight);
+            healParticlesRight = Instantiate(prefab, transform.position, Quaternion.identity);
+            healParticlesRight.transform.SetParent(transform);
+            healParticlesRight.transform.localPosition = Vector3.up * 0.5f;
+        }
+        else
+        {
+            if (healParticlesLeft != null) Destroy(healParticlesLeft);
+            healParticlesLeft = Instantiate(prefab, transform.position, Quaternion.identity);
+            healParticlesLeft.transform.SetParent(transform);
+            healParticlesLeft.transform.localPosition = Vector3.up * 0.5f;
+        }
+    }
+
+    void DestroyHealParticles(bool isRight)
+    {
+        if (isRight)
+        {
+            if (healParticlesRight != null)
+            {
+                // ✅ Останавливаем эмиссию но даём частицам доиграть
+                var ps = healParticlesRight.GetComponent<ParticleSystem>();
+                if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                Destroy(healParticlesRight, ps != null ? ps.main.startLifetime.constantMax : 2f);
+                healParticlesRight = null;
+            }
+        }
+        else
+        {
+            if (healParticlesLeft != null)
+            {
+                var ps = healParticlesLeft.GetComponent<ParticleSystem>();
+                if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                Destroy(healParticlesLeft, ps != null ? ps.main.startLifetime.constantMax : 2f);
+                healParticlesLeft = null;
+            }
+        }
+    }
+
+    // ─── Оружие (Lunacid стиль) ───────────────────────────────────────
 
     void HandleWeaponInput(bool isRight, Item weapon, bool grounded)
     {
@@ -363,7 +402,6 @@ public class HandController : MonoBehaviour
 
         if (!grounded)
         {
-            // В воздухе — сбрасываем замах
             if (isWindingUp)
             {
                 isWindingUp = false; windUpTimer = 0f;
@@ -373,9 +411,7 @@ public class HandController : MonoBehaviour
             return;
         }
 
-        // Нажали — начинаем замах (минимум 150мс между атаками)
-        if (Input.GetMouseButtonDown(mouseBtn) && landingAttackTimer <= 0f
-            && Time.time >= lastTime + 0.15f)
+        if (Input.GetMouseButtonDown(mouseBtn) && landingAttackTimer <= 0f && Time.time >= lastTime + 0.15f)
         {
             isWindingUp = true; windUpTimer = 0f;
             if (isRight)
@@ -393,11 +429,9 @@ public class HandController : MonoBehaviour
             if (weaponWindUpSound != null) audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
         }
 
-        // Держим — накапливаем замах
         if (Input.GetMouseButton(mouseBtn) && isWindingUp)
             windUpTimer = Mathf.Min(windUpTimer + Time.deltaTime, maxWindUpTime);
 
-        // Отпустили — бьём всегда без исключений
         if (Input.GetMouseButtonUp(mouseBtn) && isWindingUp)
         {
             if (isRight) rightHandAnimator?.ResetTrigger("windUp");
@@ -408,13 +442,11 @@ public class HandController : MonoBehaviour
         }
     }
 
-    // ✅ Просто запускаем анимацию и применяем урон — без блокировки
     void DoStrike(bool isRight, float windUp = 0f)
     {
         hasWeaponOnAttack = isRight;
         pendingEnemy = null;
 
-        // ✅ Урон от времени замаха: быстрый клик = 0.5x, полный замах = 2x
         float chargePercent = Mathf.Clamp01(windUp / maxWindUpTime);
         float damageMultiplier = Mathf.Lerp(0.5f, 2f, chargePercent);
 
@@ -428,16 +460,8 @@ public class HandController : MonoBehaviour
 
         ScanHit(weaponRange * 1.2f, isRight);
 
-        if (isRight)
-        {
-            rightHandAnimator?.ResetTrigger("strike");
-            rightHandAnimator?.SetTrigger("strike");
-        }
-        else
-        {
-            leftHandAnimator?.ResetTrigger("strike");
-            leftHandAnimator?.SetTrigger("strike");
-        }
+        if (isRight) { rightHandAnimator?.ResetTrigger("strike"); rightHandAnimator?.SetTrigger("strike"); }
+        else { leftHandAnimator?.ResetTrigger("strike"); leftHandAnimator?.SetTrigger("strike"); }
 
         Invoke(nameof(ApplyStoredHit), 0.15f);
     }
@@ -458,10 +482,8 @@ public class HandController : MonoBehaviour
             twoHandAnimator?.SetTrigger("windUp");
             if (weaponWindUpSound != null) audioSource.PlayOneShot(weaponWindUpSound, windUpVolume);
         }
-
         if (Input.GetMouseButton(0) && isWindingUpRight)
             windUpTimerRight = Mathf.Min(windUpTimerRight + Time.deltaTime, twoHandMaxWindUpTime);
-
         if (Input.GetMouseButtonUp(0) && isWindingUpRight)
         {
             if (windUpTimerRight >= twoHandMinWindUpTime && Time.time >= lastAttackTimeRight + attackCooldown)
