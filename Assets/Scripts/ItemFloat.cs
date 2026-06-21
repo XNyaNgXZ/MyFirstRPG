@@ -18,7 +18,6 @@ public class ItemFloat : MonoBehaviour
 
     [Header("Высота парения")]
     public float floatHeight = 0.1f;
-    public LayerMask groundLayer = ~0;
 
     private float startY;
     private float timeOffset;
@@ -28,16 +27,41 @@ public class ItemFloat : MonoBehaviour
     private float throwTimer = 0f;
     private float gravityVel = 0f;
 
+    // ✅ Окружение = нет игровых скриптов
+    static bool IsEnv(Collider col)
+    {
+        if (col == null) return false;
+        if (col.GetComponent<ItemFloat>() != null) return false;
+        if (col.GetComponent<ItemData>() != null) return false;
+        if (col.GetComponent<SpellPickup>() != null) return false;
+        if (col.GetComponent<EnemyNav>() != null) return false;
+        if (col.GetComponent<PlayerMovement>() != null) return false;
+        if (col.GetComponent<Arrow>() != null) return false;
+        return true;
+    }
+
+    // ✅ Для FindGroundHeight — исключаем себя но не по IsEnv
+    bool IsGroundForMe(Collider col)
+    {
+        if (col == null) return false;
+        if (col == GetComponent<Collider>()) return false; // себя исключаем
+        // Чужие предметы не считаем полом
+        if (col.GetComponent<ItemFloat>() != null) return false;
+        if (col.GetComponent<EnemyNav>() != null) return false;
+        if (col.GetComponent<PlayerMovement>() != null) return false;
+        if (col.GetComponent<Arrow>() != null) return false;
+        // ItemData и SpellPickup на ДРУГИХ объектах — не пол
+        // но свой коллайдер уже исключён выше
+        if (col.GetComponent<ItemData>() != null) return false;
+        if (col.GetComponent<SpellPickup>() != null) return false;
+        return true;
+    }
+
     void Awake()
     {
         var rb = GetComponent<Rigidbody>();
         if (rb != null) Destroy(rb);
         transform.rotation = Quaternion.Euler(tiltAngle, transform.eulerAngles.y, 0f);
-    }
-
-    void Start()
-    {
-        timeOffset = Random.Range(0f, Mathf.PI * 2f);
 
         Collider myCol = GetComponent<Collider>();
         if (myCol != null)
@@ -59,26 +83,22 @@ public class ItemFloat : MonoBehaviour
                 Collider otherCol = other.GetComponent<Collider>();
                 if (otherCol != null) Physics.IgnoreCollision(myCol, otherCol);
             }
+
+            if (applyThrow) myCol.enabled = false;
         }
+    }
+
+    void Start()
+    {
+        timeOffset = Random.Range(0f, Mathf.PI * 2f);
 
         if (applyThrow)
         {
             isThrown = true;
-            Collider col = GetComponent<Collider>();
-            if (col != null) col.enabled = false;
-
-            Vector3 dir;
-            if (customThrowDir != Vector3.zero)
-            {
-                dir = customThrowDir;
-                dir.y = 0.15f;
-            }
-            else
-            {
-                Camera cam = Camera.main;
-                dir = cam != null ? cam.transform.forward : Vector3.forward;
-                dir.y = 0.15f;
-            }
+            Vector3 dir = customThrowDir != Vector3.zero
+                ? customThrowDir
+                : (Camera.main != null ? Camera.main.transform.forward : Vector3.forward);
+            dir.y = 0.15f;
             throwVelocity = dir.normalized * throwForce;
             gravityVel = 1.5f;
         }
@@ -93,34 +113,27 @@ public class ItemFloat : MonoBehaviour
     void FindGroundHeight()
     {
         Ray ray = new Ray(transform.position + Vector3.up * 5f, Vector3.down);
-        RaycastHit[] hits = Physics.RaycastAll(ray, 50f);
         float groundY = float.MinValue;
-
-        foreach (var hit in hits)
+        foreach (var hit in Physics.RaycastAll(ray, 50f))
         {
-            if (hit.collider.GetComponent<ItemFloat>() != null) continue;
-            if (hit.collider.GetComponent<ItemData>() != null) continue;
-            if (hit.collider.GetComponent<SpellPickup>() != null) continue;
-            if (hit.collider == GetComponent<Collider>()) continue;
+            if (!IsGroundForMe(hit.collider)) continue;
             if (hit.point.y > groundY) groundY = hit.point.y;
         }
-
-        float halfScale = GetHalfScale();
+        // ✅ halfScale из bounds — точный размер независимо от scale
+        Collider selfCol = GetComponent<Collider>();
+        float halfScale = selfCol != null ? selfCol.bounds.extents.y : transform.localScale.y * 0.5f;
         startY = groundY > float.MinValue
             ? groundY + floatHeight + halfScale
             : transform.position.y;
-
         transform.position = new Vector3(transform.position.x, startY, transform.position.z);
         isSettled = true;
     }
 
     void Update()
     {
-        // Вращение с фиксированным наклоном
         transform.Rotate(0f, rotateSpeed * Time.deltaTime, 0f, Space.World);
         Vector3 e = transform.eulerAngles;
-        e.x = tiltAngle;
-        e.z = 0f;
+        e.x = tiltAngle; e.z = 0f;
         transform.eulerAngles = e;
 
         if (isThrown)
@@ -134,20 +147,13 @@ public class ItemFloat : MonoBehaviour
             throwVelocity = Vector3.Lerp(throwVelocity, Vector3.zero, Time.deltaTime * 3f);
 
             float halfScale = GetHalfScale();
-            Ray ray = new Ray(pos + Vector3.up * 0.5f, Vector3.down);
-
-            // ✅ Фильтруем — только пол/стены, не другие предметы
-            RaycastHit[] bounceHits = Physics.RaycastAll(ray, halfScale + 0.4f);
             RaycastHit bestHit = default;
             bool foundGround = false;
-            foreach (var h in bounceHits)
+            foreach (var h in Physics.RaycastAll(new Ray(pos + Vector3.up * 0.5f, Vector3.down), halfScale + 0.4f))
             {
-                if (h.collider.GetComponent<ItemFloat>() != null) continue;
-                if (h.collider.GetComponent<ItemData>() != null) continue;
-                if (h.collider.GetComponent<SpellPickup>() != null) continue;
                 if (h.collider == GetComponent<Collider>()) continue;
-                if (!foundGround || h.point.y > bestHit.point.y)
-                { bestHit = h; foundGround = true; }
+                if (!IsEnv(h.collider)) continue;
+                if (!foundGround || h.point.y > bestHit.point.y) { bestHit = h; foundGround = true; }
             }
 
             if (foundGround)
@@ -161,17 +167,32 @@ public class ItemFloat : MonoBehaviour
 
                 if (throwTimer >= bounceTime)
                 {
-                    isThrown = false;
-                    isSettled = true;
-                    startY = bestHit.point.y + floatHeight + halfScale;
-                    pos.y = startY;
-                    Collider col = GetComponent<Collider>();
-                    if (col != null) col.enabled = true;
-                    if (GetComponent<BlobShadow>() == null)
-                        gameObject.AddComponent<BlobShadow>();
-                    // ✅ Найти свободное место если пересекаемся с другим предметом
-                    pos = FindFreePosition(pos);
-                    startY = pos.y;
+                    // Проверяем что под нами реальный пол
+                    bool hasGround = false;
+                    foreach (var gh in Physics.RaycastAll(new Ray(pos + Vector3.up * 0.5f, Vector3.down), 50f))
+                        if (IsEnv(gh.collider)) { hasGround = true; break; }
+
+                    if (!hasGround)
+                    {
+                        throwTimer = bounceTime * 0.5f;
+                        gravityVel = -2f;
+                    }
+                    else
+                    {
+                        isThrown = false;
+                        isSettled = true;
+                        // ✅ bounds.extents.y — реальная высота с учётом scale
+                        Collider selfCol2 = GetComponent<Collider>();
+                        float realHalf = selfCol2 != null ? selfCol2.bounds.extents.y : halfScale;
+                        startY = bestHit.point.y + floatHeight + realHalf + 0.08f;
+                        pos.y = startY;
+                        Collider col = GetComponent<Collider>();
+                        if (col != null) col.enabled = true;
+                        if (GetComponent<BlobShadow>() == null)
+                            gameObject.AddComponent<BlobShadow>();
+                        pos = FindFreePosition(pos);
+                        startY = pos.y;
+                    }
                 }
             }
 
@@ -188,10 +209,8 @@ public class ItemFloat : MonoBehaviour
     {
         foreach (var other in Object.FindObjectsByType<ItemFloat>(FindObjectsInactive.Exclude))
         {
-            if (other == this) continue;
-            if (!other.isSettled) continue;
-            float dist = Vector2.Distance(
-                new Vector2(pos.x, pos.z),
+            if (other == this || !other.isSettled) continue;
+            float dist = Vector2.Distance(new Vector2(pos.x, pos.z),
                 new Vector2(other.transform.position.x, other.transform.position.z));
             if (dist < minDist) return false;
         }
@@ -201,49 +220,31 @@ public class ItemFloat : MonoBehaviour
     Vector3 FindFreePosition(Vector3 pos)
     {
         float radius = Mathf.Max(transform.localScale.x, transform.localScale.z) * 0.5f;
-        float minDist = radius * 3f;
-
-        // ✅ Текущая позиция свободна — остаёмся
+        float minDist = Mathf.Max(radius * 3f, 0.3f);
         if (IsPositionFree(pos, minDist)) return pos;
 
         float searchRadius = radius * 4f;
         for (int i = 0; i < 12; i++)
         {
-            float angle = i * (360f / 12) * Mathf.Deg2Rad;
+            float angle = i * 30f * Mathf.Deg2Rad;
             Vector3 candidate = pos + new Vector3(Mathf.Sin(angle), 0f, Mathf.Cos(angle)) * searchRadius;
-
             if (!IsPositionFree(candidate, minDist)) continue;
 
-            // ✅ Проверяем нет ли стены между исходной позицией и кандидатом
-            Vector3 checkFrom = pos + Vector3.up * 0.3f;
-            Vector3 checkTo = candidate + Vector3.up * 0.3f;
-            Vector3 checkDir = (checkTo - checkFrom).normalized;
-            float checkDist = Vector3.Distance(checkFrom, checkTo);
-            if (Physics.Raycast(checkFrom, checkDir, checkDist)) continue;
+            Vector3 from = pos + Vector3.up * 0.3f;
+            Vector3 to = candidate + Vector3.up * 0.3f;
+            if (Physics.Raycast(from, (to - from).normalized, Vector3.Distance(from, to))) continue;
 
-            Ray ray = new Ray(candidate + Vector3.up * 5f, Vector3.down);
-            if (Physics.Raycast(ray, out RaycastHit hit, 50f))
-            {
-                if (hit.collider.GetComponent<ItemFloat>() == null &&
-                    hit.collider.GetComponent<ItemData>() == null &&
-                    hit.collider.GetComponent<SpellPickup>() == null)
+            if (Physics.Raycast(new Ray(candidate + Vector3.up * 5f, Vector3.down), out RaycastHit hit, 50f))
+                if (IsEnv(hit.collider))
                 {
                     candidate.y = hit.point.y + floatHeight + GetHalfScale();
                     return candidate;
                 }
-            }
         }
-        // ✅ Не нашли свободное место — принудительно опускаем на пол под текущей позицией
-        Ray fallbackRay = new Ray(pos + Vector3.up * 5f, Vector3.down);
-        if (Physics.Raycast(fallbackRay, out RaycastHit fallbackHit, 50f))
-        {
-            if (fallbackHit.collider.GetComponent<ItemFloat>() == null &&
-                fallbackHit.collider.GetComponent<ItemData>() == null &&
-                fallbackHit.collider.GetComponent<SpellPickup>() == null)
-            {
-                pos.y = fallbackHit.point.y + floatHeight + GetHalfScale();
-            }
-        }
+
+        if (Physics.Raycast(new Ray(pos + Vector3.up * 5f, Vector3.down), out RaycastHit fh, 50f))
+            if (IsEnv(fh.collider))
+                pos.y = fh.point.y + floatHeight + GetHalfScale();
         return pos;
     }
 
@@ -254,16 +255,15 @@ public class ItemFloat : MonoBehaviour
         {
             foreach (var other in Object.FindObjectsByType<ItemFloat>(FindObjectsInactive.Exclude))
             {
-                Collider otherCol = other.GetComponent<Collider>();
-                if (otherCol != null) Physics.IgnoreCollision(myCol, otherCol);
+                Collider oc = other.GetComponent<Collider>();
+                if (oc != null) Physics.IgnoreCollision(myCol, oc);
             }
             foreach (var sp in Object.FindObjectsByType<SpellPickup>(FindObjectsInactive.Exclude))
             {
-                Collider spCol = sp.GetComponent<Collider>();
-                if (spCol != null) Physics.IgnoreCollision(myCol, spCol);
+                Collider sc = sp.GetComponent<Collider>();
+                if (sc != null) Physics.IgnoreCollision(myCol, sc);
             }
         }
-
         var f = go.AddComponent<ItemFloat>();
         f.applyThrow = true;
         return f;

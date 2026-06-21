@@ -20,42 +20,34 @@ public class SpellPickup : MonoBehaviour
             }
         }
 
-        // ✅ Физика — падает на пол
+        // ✅ Убираем Rigidbody — ItemFloat сам найдёт пол
         var rb = GetComponent<Rigidbody>();
-        if (rb == null) rb = gameObject.AddComponent<Rigidbody>();
-        rb.isKinematic = false;
+        if (rb != null) Destroy(rb);
 
-        // Игрок не врезается
+        // Игнорируем коллизии с игроком
         var col = GetComponent<Collider>();
         var playerObj = GameObject.FindWithTag("Player");
         if (col != null && playerObj != null)
         {
-            var playerCol = playerObj.GetComponent<Collider>();
-            if (playerCol != null) Physics.IgnoreCollision(col, playerCol);
+            foreach (Collider c in playerObj.GetComponentsInChildren<Collider>(true))
+                Physics.IgnoreCollision(col, c);
         }
 
-        // Замираем через 1.5 сек
-        Invoke(nameof(Freeze), 3.5f);
-    }
+        // ✅ ItemFloat находит пол и парит
+        if (GetComponent<ItemFloat>() == null)
+        {
+            var f = gameObject.AddComponent<ItemFloat>();
+            f.applyThrow = false;
+        }
 
-    void Freeze()
-    {
-        var rb = GetComponent<Rigidbody>();
-        if (rb == null) return;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
+        if (GetComponent<BlobShadow>() == null)
+            gameObject.AddComponent<BlobShadow>();
     }
 
     public void Pickup(Inventory inventory)
     {
         if (spell == null || inventory == null) return;
-
         inventory.AddKnownSpell(spell);
-
-        string bookOrScroll = spell.isBook ? "Книга" : "Свиток";
-        Debug.Log($"Подобран {bookOrScroll}: {spell.spellName}");
-
         InventoryUICode.RefreshIfOpen();
         Destroy(gameObject);
     }

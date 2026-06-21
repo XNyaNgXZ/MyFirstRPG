@@ -285,13 +285,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &78369076
 GameObject:
   m_ObjectHideFlags: 0
@@ -682,13 +685,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &83737371
 GameObject:
   m_ObjectHideFlags: 0
@@ -2215,13 +2221,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &393946490
 GameObject:
   m_ObjectHideFlags: 0
@@ -2887,9 +2896,10 @@ MonoBehaviour:
   patrolWaitMax: 10
   possibleDrops:
   - item: {fileID: 11400000, guid: d7752d4787f185648bb7520310c443b2, type: 2}
-    weight: 60
-  dropChance: 50
-  dropFreezeDelay: 3.5
+    weight: 50
+  - item: {fileID: 11400000, guid: c07080e3702741f4f815d6e3dfaff404, type: 2}
+    weight: 50
+  dropChance: 80
 --- !u!1001 &442833040
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3129,13 +3139,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &471446215
 GameObject:
   m_ObjectHideFlags: 0
@@ -3302,13 +3315,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &474754888
 GameObject:
   m_ObjectHideFlags: 0
@@ -3475,13 +3491,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &477982564
 GameObject:
   m_ObjectHideFlags: 0
@@ -3648,13 +3667,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &499509448
 GameObject:
   m_ObjectHideFlags: 0
@@ -3821,13 +3843,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &534915973
 GameObject:
   m_ObjectHideFlags: 0
@@ -4106,13 +4131,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &583807709
 GameObject:
   m_ObjectHideFlags: 0
@@ -4386,13 +4414,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &649709176
 GameObject:
   m_ObjectHideFlags: 0
@@ -4724,13 +4755,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &686311962
 GameObject:
   m_ObjectHideFlags: 0
@@ -5156,13 +5190,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &812124260
 GameObject:
   m_ObjectHideFlags: 0
@@ -5957,9 +5994,10 @@ MonoBehaviour:
   patrolWaitMax: 10
   possibleDrops:
   - item: {fileID: 11400000, guid: d7752d4787f185648bb7520310c443b2, type: 2}
-    weight: 60
-  dropChance: 50
-  dropFreezeDelay: 3.5
+    weight: 50
+  - item: {fileID: 11400000, guid: c07080e3702741f4f815d6e3dfaff404, type: 2}
+    weight: 50
+  dropChance: 80
 --- !u!195 &915161717
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -6560,13 +6598,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1094937400
 GameObject:
   m_ObjectHideFlags: 0
@@ -6766,13 +6807,16 @@ MonoBehaviour:
   rotateSpeed: 90
   bobHeight: 0.08
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1101559012
 GameObject:
   m_ObjectHideFlags: 0
@@ -7904,13 +7948,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1310427048
 GameObject:
   m_ObjectHideFlags: 0
@@ -8892,13 +8939,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1515429574
 GameObject:
   m_ObjectHideFlags: 0
@@ -9060,13 +9110,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1573169115
 GameObject:
   m_ObjectHideFlags: 0
@@ -9457,13 +9510,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1642953159
 GameObject:
   m_ObjectHideFlags: 0
@@ -9625,13 +9681,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1664341733
 GameObject:
   m_ObjectHideFlags: 0
@@ -9984,13 +10043,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1752569867
 GameObject:
   m_ObjectHideFlags: 0
@@ -10269,13 +10331,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &1809896724
 GameObject:
   m_ObjectHideFlags: 0
@@ -10970,13 +11035,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &2011750155 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
@@ -11015,13 +11083,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &2021091724
 GameObject:
   m_ObjectHideFlags: 0
@@ -11094,13 +11165,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &2118223970 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
@@ -11139,13 +11213,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1 &2136706612 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6400534782072718842, guid: 62894816b92cfc74eac66595b87f62a0, type: 3}
@@ -11184,13 +11261,16 @@ MonoBehaviour:
   rotateSpeed: 45
   bobHeight: 0.04
   bobSpeed: 2
+  tiltAngle: 25
   applyThrow: 0
   throwForce: 1.5
   bounceTime: 0.8
+  customThrowDir: {x: 0, y: 0, z: 0}
   floatHeight: 0.4
   groundLayer:
     serializedVersion: 2
     m_Bits: 4294967295
+  isSettled: 0
 --- !u!1001 &8250481121228991356
 PrefabInstance:
   m_ObjectHideFlags: 0

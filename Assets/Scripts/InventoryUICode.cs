@@ -130,7 +130,7 @@ public class InventoryUICode : MonoBehaviour
         titleRT.pivot = new Vector2(0.5f, 1);
         titleRT.sizeDelta = new Vector2(0, TITLE_H); titleRT.anchoredPosition = Vector2.zero;
         titleText = titleGO.AddComponent<Text>();
-        titleText.text = "ИНВЕНТАРЬ  [TAB]";
+        titleText.text = "ИНВЕНТАРЬ";
         titleText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         titleText.fontSize = 18; titleText.color = new Color(0.65f, 0.65f, 0.75f);
         titleText.alignment = TextAnchor.MiddleCenter;
@@ -195,7 +195,7 @@ public class InventoryUICode : MonoBehaviour
         inventoryGrid.SetActive(tab == 0);
         spellsGrid.SetActive(tab == 1);
         if (titleText != null)
-            titleText.text = tab == 0 ? "ИНВЕНТАРЬ  [TAB]" : "ЗАКЛИНАНИЯ  [TAB]";
+            titleText.text = tab == 0 ? "ИНВЕНТАРЬ" : "ЗАКЛИНАНИЯ";
         if (tab == 1) BuildSpellSlots();
         RefreshTabVisuals();
     }
@@ -459,25 +459,9 @@ public class InventoryUICode : MonoBehaviour
 
     void HandleOpenClose()
     {
-        if (!Input.GetKeyDown(KeyCode.Tab)) return;
-        IsOpen = !IsOpen;
-        inventoryPanel.SetActive(IsOpen);
-        tabsContainer.SetActive(IsOpen);
-
-        if (IsOpen)
-        {
-            RefreshSlots();
-            if (currentTab == 1) BuildSpellSlots();
-            PlayerMovement.UnlockCursor();
-        }
-        else
-        {
-            PlayerMovement.LockCursor();
-            if (tooltip != null) tooltip.SetActive(false);
-            if (isDragging) CancelDrag();
-            if (splitPanel != null) CloseSplitPanel();
-            pendingIndex = -1;
-        }
+        // Escape обрабатывается в PauseMenu (закрывает всё сразу)
+        // Здесь только блокируем Tab-открытие
+        if (PauseMenu.IsOpen) return;
     }
 
     public void SetOpen(bool open)
@@ -689,9 +673,10 @@ public class InventoryUICode : MonoBehaviour
 
         Camera cam = GetComponentInChildren<Camera>();
         Vector3 throwDir = cam != null ? cam.transform.forward : transform.forward;
+        // ✅ Спавним дальше от камеры чтобы не было коллизии с лицом
         Vector3 spawnPos = cam != null
-            ? cam.transform.position + throwDir * 0.5f
-            : transform.position + Vector3.up * 0.5f + throwDir * 0.5f;
+            ? cam.transform.position + throwDir * 1.2f
+            : transform.position + Vector3.up * 0.5f + throwDir * 1.2f;
 
         var drop = GameObject.CreatePrimitive(PrimitiveType.Cube);
         drop.transform.position = spawnPos;
@@ -720,8 +705,21 @@ public class InventoryUICode : MonoBehaviour
 
         // ✅ Парящий предмет как в Lunacid
         // ✅ Lunacid стиль — бросок вперёд, отскок, потом парение
-        ItemFloat.AddToDropped(drop);
-        drop.AddComponent<BlobShadow>();
+        var itemFloat = ItemFloat.AddToDropped(drop);
+        itemFloat.rotateSpeed = 20f;
+        itemFloat.bobHeight = 0.02f;
+        itemFloat.bobSpeed = 2f;
+        itemFloat.tiltAngle = 25f;
+        itemFloat.throwForce = 1.5f;
+        itemFloat.bounceTime = 0.8f;
+        itemFloat.floatHeight = 0.4f;
+        var shadow = drop.AddComponent<BlobShadow>();
+        shadow.shadowAlpha = 0.6f;
+        shadow.shadowScale = 1.5f;
+        shadow.heightOffset = 0.05f;
+        shadow.shadowAlpha = 0.6f;
+        shadow.shadowScale = 1.5f;
+        shadow.heightOffset = 0.05f;
     }
 
     public void RefreshSlots()

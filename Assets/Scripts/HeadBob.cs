@@ -55,15 +55,16 @@ public class HeadBob : MonoBehaviour
     {
         if (controller == null) return;
 
-        bool uiOpen = InventoryUICode.IsOpen || EquipmentUI.IsOpen;
         bool isGrounded = controller.isGrounded;
-        bool isMoving = Input.GetAxisRaw("Horizontal") != 0 ||
-                        Input.GetAxisRaw("Vertical") != 0;
         bool crouching = playerMovement != null && playerMovement.IsCrouching;
         bool sprinting = playerMovement != null && playerMovement.isSprinting;
 
-        if (!wasGrounded && isGrounded)
-            landingVelocity = -landingDipAmount;
+        // ✅ velocity — работает всегда
+        Vector3 hVel = controller.velocity; hVel.y = 0;
+        bool isMoving = hVel.magnitude > 0.1f;
+
+        // Приземление — всегда
+        if (!wasGrounded && isGrounded) landingVelocity = -landingDipAmount;
         wasGrounded = isGrounded;
 
         if (Mathf.Abs(landingOffset) > 0.001f || Mathf.Abs(landingVelocity) > 0.001f)
@@ -78,9 +79,9 @@ public class HeadBob : MonoBehaviour
         float baseY = crouching ? crouchCamY : standCamY;
         Vector3 basePos = new Vector3(defaultLocalPos.x, baseY, defaultLocalPos.z);
 
-        if (!isGrounded || uiOpen)
+        if (!isGrounded || !isMoving)
         {
-            timer = 0f;
+            if (!isGrounded) timer = 0f;
             transform.localPosition = Vector3.Lerp(
                 transform.localPosition,
                 basePos + Vector3.up * landingOffset,
@@ -88,35 +89,18 @@ public class HeadBob : MonoBehaviour
             return;
         }
 
-        if (isMoving)
-        {
-            float speed = sprinting ? sprintBobSpeed : crouching ? crouchBobSpeed : walkBobSpeed;
-            float amountX = sprinting ? sprintBobAmountX : crouching ? crouchBobAmountX : walkBobAmountX;
-            float amountY = sprinting ? sprintBobAmountY : crouching ? crouchBobAmountY : walkBobAmountY;
+        float speed = sprinting ? sprintBobSpeed : crouching ? crouchBobSpeed : walkBobSpeed;
+        float amountX = sprinting ? sprintBobAmountX : crouching ? crouchBobAmountX : walkBobAmountX;
+        float amountY = sprinting ? sprintBobAmountY : crouching ? crouchBobAmountY : walkBobAmountY;
 
-            timer += Time.deltaTime * speed;
-            float currentSin = Mathf.Sin(timer);
+        timer += Time.deltaTime * speed;
+        float currentSin = Mathf.Sin(timer);
+        if (lastTimerSin >= 0f && currentSin < 0f) stepImpactOffset = -stepImpactAmount;
+        lastTimerSin = currentSin;
 
-            if (lastTimerSin >= 0f && currentSin < 0f)
-                stepImpactOffset = -stepImpactAmount;
-            lastTimerSin = currentSin;
-
-            Vector3 target = basePos + new Vector3(
-                Mathf.Sin(timer) * amountX,
-                Mathf.Abs(currentSin) * amountY + stepImpactOffset + landingOffset,
-                0f);
-
-            transform.localPosition = Vector3.Lerp(
-                transform.localPosition, target, returnSpeed * Time.deltaTime);
-        }
-        else
-        {
-            timer = 0f;
-            lastTimerSin = 0f;
-            transform.localPosition = Vector3.Lerp(
-                transform.localPosition,
-                basePos + Vector3.up * landingOffset,
-                returnSpeed * Time.deltaTime);
-        }
+        Vector3 target = basePos + new Vector3(
+            Mathf.Sin(timer) * amountX,
+            Mathf.Abs(currentSin) * amountY + stepImpactOffset + landingOffset, 0f);
+        transform.localPosition = Vector3.Lerp(transform.localPosition, target, returnSpeed * Time.deltaTime);
     }
 }

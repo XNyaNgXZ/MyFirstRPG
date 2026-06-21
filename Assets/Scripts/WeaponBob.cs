@@ -6,11 +6,9 @@ public class WeaponBob : MonoBehaviour
     public float walkBobSpeed = 8f;
     public float walkBobAmountX = 0.05f;
     public float walkBobAmountY = 0.07f;
-
     public float sprintBobSpeed = 12f;
     public float sprintBobAmountX = 0.08f;
     public float sprintBobAmountY = 0.12f;
-
     public float crouchBobSpeed = 5f;
     public float crouchBobAmountX = 0.03f;
     public float crouchBobAmountY = 0.04f;
@@ -33,49 +31,33 @@ public class WeaponBob : MonoBehaviour
     void Update()
     {
         if (controller == null) return;
-        if (InventoryUICode.IsOpen || EquipmentUI.IsOpen)
-        {
-            timer = 0f;
-            transform.localPosition = Vector3.Lerp(transform.localPosition, initialPosition, returnSpeed * Time.deltaTime);
-            return;
-        }
 
-        bool isMoving = Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0;
+        // ✅ velocity — работает всегда, независимо от меню/инвентаря
+        Vector3 hVel = controller.velocity; hVel.y = 0;
+        bool isMoving = hVel.magnitude > 0.1f;
         bool isGrounded = controller.isGrounded;
 
         if (!isGrounded || !isMoving)
         {
             timer = 0f;
-            transform.localPosition = Vector3.Lerp(transform.localPosition, initialPosition, returnSpeed * Time.deltaTime);
+            transform.localPosition = Vector3.Lerp(
+                transform.localPosition, initialPosition, returnSpeed * Time.deltaTime);
             return;
         }
 
-        float speed = walkBobSpeed;
-        float amountX = walkBobAmountX;
-        float amountY = walkBobAmountY;
-
+        float speed = walkBobSpeed, amountX = walkBobAmountX, amountY = walkBobAmountY;
         if (playerMovement != null)
         {
             if (playerMovement.isSprinting)
-            {
-                speed = sprintBobSpeed;
-                amountX = sprintBobAmountX;
-                amountY = sprintBobAmountY;
-            }
+            { speed = sprintBobSpeed; amountX = sprintBobAmountX; amountY = sprintBobAmountY; }
             else if (playerMovement.IsCrouching)
-            {
-                speed = crouchBobSpeed;
-                amountX = crouchBobAmountX;
-                amountY = crouchBobAmountY;
-            }
+            { speed = crouchBobSpeed; amountX = crouchBobAmountX; amountY = crouchBobAmountY; }
         }
 
         timer += Time.deltaTime * speed;
-        Vector3 targetPosition = initialPosition + new Vector3(
+        Vector3 target = initialPosition + new Vector3(
             Mathf.Sin(timer) * amountX,
-            Mathf.Abs(Mathf.Sin(timer)) * amountY,
-            0f);
-
-        transform.localPosition = Vector3.Lerp(transform.localPosition, targetPosition, returnSpeed * Time.deltaTime);
+            Mathf.Abs(Mathf.Sin(timer)) * amountY, 0f);
+        transform.localPosition = Vector3.Lerp(transform.localPosition, target, returnSpeed * Time.deltaTime);
     }
 }

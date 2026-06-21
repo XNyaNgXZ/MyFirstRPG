@@ -20,25 +20,24 @@ public class WeaponSway : MonoBehaviour
 
     void Update()
     {
-        if (InventoryUICode.IsOpen || EquipmentUI.IsOpen)
-        {
-            targetSway = Vector2.Lerp(targetSway, Vector2.zero, Time.deltaTime * swayReturnSpeed);
-            currentSway = Vector2.Lerp(currentSway, targetSway, Time.deltaTime * swaySpeed * 10f);
-            transform.localPosition = Vector3.Lerp(
-                transform.localPosition, initialPosition, Time.deltaTime * swayReturnSpeed);
-            return;
-        }
+        // ✅ Мышь заблокирована при меню паузы и инвентаре
+        bool blockMouse = PauseMenu.IsOpen || InventoryUICode.IsOpen || EquipmentUI.IsOpen;
 
-        float mouseX = Input.GetAxis("Mouse X");
-        float mouseY = Input.GetAxis("Mouse Y");
-        bool mouseMoving = Mathf.Abs(mouseX) > 0.01f || Mathf.Abs(mouseY) > 0.01f;
-
-        if (mouseMoving)
+        if (!blockMouse)
         {
-            targetSway.x -= mouseX * mouseSensitivity * swaySpeed * 50f;
-            targetSway.y -= mouseY * mouseSensitivity * swaySpeed * 50f;
-            targetSway.x = Mathf.Clamp(targetSway.x, -maxSwayX, maxSwayX);
-            targetSway.y = Mathf.Clamp(targetSway.y, -maxSwayY, maxSwayY);
+            float mouseX = Input.GetAxis("Mouse X");
+            float mouseY = Input.GetAxis("Mouse Y");
+            if (Mathf.Abs(mouseX) > 0.01f || Mathf.Abs(mouseY) > 0.01f)
+            {
+                targetSway.x -= mouseX * mouseSensitivity * swaySpeed * 50f;
+                targetSway.y -= mouseY * mouseSensitivity * swaySpeed * 50f;
+                targetSway.x = Mathf.Clamp(targetSway.x, -maxSwayX, maxSwayX);
+                targetSway.y = Mathf.Clamp(targetSway.y, -maxSwayY, maxSwayY);
+            }
+            else
+            {
+                targetSway = Vector2.Lerp(targetSway, Vector2.zero, Time.deltaTime * swayReturnSpeed);
+            }
         }
         else
         {
@@ -46,9 +45,9 @@ public class WeaponSway : MonoBehaviour
         }
 
         currentSway = Vector2.Lerp(currentSway, targetSway, Time.deltaTime * swaySpeed * 10f);
-
-        Vector3 targetPosition = initialPosition + new Vector3(currentSway.x, currentSway.y, 0f);
         transform.localPosition = Vector3.Lerp(
-            transform.localPosition, targetPosition, Time.deltaTime * swaySpeed * 10f);
+            transform.localPosition,
+            initialPosition + new Vector3(currentSway.x, currentSway.y, 0f),
+            Time.deltaTime * swaySpeed * 10f);
     }
 }

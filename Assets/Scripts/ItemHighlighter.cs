@@ -69,7 +69,7 @@ public class ItemHighlighter : MonoBehaviour
         Collider hitCollider = null;
         string itemName = "";
 
-        if (playerCamera != null && !InventoryUICode.IsOpen && !EquipmentUI.IsOpen)
+        if (playerCamera != null && !PauseMenu.IsOpen && !InventoryUICode.IsOpen && !EquipmentUI.IsOpen)
         {
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, interactionRange))

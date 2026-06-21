@@ -19,7 +19,7 @@ public class MouseInteractor : MonoBehaviour
 
     void Update()
     {
-        if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
+        if (PauseMenu.IsOpen || InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
         if (!Input.GetKeyDown(KeyCode.E)) return;
         if (Time.time < lastPickupTime + pickupCooldown) return;
 

@@ -79,15 +79,23 @@ public class PlayerMovement : MonoBehaviour
 
         currentStamina = maxStamina;
         targetYaw = currentYaw = transform.eulerAngles.y;
+        wasGrounded = true;
         LockCursor();
     }
 
     void Update()
     {
+        bool menuOpen = PauseMenu.IsOpen;
         bool uiOpen = InventoryUICode.IsOpen || EquipmentUI.IsOpen;
-        HandleCamera(uiOpen);
-        HandleMovement(uiOpen);
-        HandleCrouch(uiOpen);
+        // Если инвентарь/снаряжение открыты через меню паузы — не блокируем движение
+        bool blockMove = uiOpen && !menuOpen;
+
+        // Камера: мышь не работает в меню паузы и UI
+        HandleCamera(uiOpen || menuOpen);
+        // Приседание: работает везде кроме инвентаря без паузы
+        HandleCrouch(blockMove);
+        // Движение: WASD работает если открыто через паузу
+        HandleMovement(blockMove);
     }
 
     void HandleCamera(bool uiOpen)
@@ -109,7 +117,9 @@ public class PlayerMovement : MonoBehaviour
         currentPitch = Mathf.Lerp(currentPitch, targetPitch, smooth);
         transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
 
-        float horizontal = Input.GetAxisRaw("Horizontal");
+        float horizontal = 0f;
+        if (Input.GetKey(KeyCode.D)) horizontal += 1f;
+        if (Input.GetKey(KeyCode.A)) horizontal -= 1f;
         float targetStrafeTilt = uiOpen ? 0f : -horizontal * tiltAmount;
         currentStrafeTilt = Mathf.Lerp(currentStrafeTilt, targetStrafeTilt, tiltSpeed * Time.deltaTime);
 
@@ -124,18 +134,28 @@ public class PlayerMovement : MonoBehaviour
 
     void HandleMovement(bool uiOpen)
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
+        // ✅ При паузе нет ввода — только гравитация работает
+        // ✅ Движение ТОЛЬКО на WASD (стрелки зарезервированы для меню)
+        float horizontal = 0f, vertical = 0f;
+        if (!uiOpen)
+        {
+            if (Input.GetKey(KeyCode.W)) vertical += 1f;
+            if (Input.GetKey(KeyCode.S)) vertical -= 1f;
+            if (Input.GetKey(KeyCode.D)) horizontal += 1f;
+            if (Input.GetKey(KeyCode.A)) horizontal -= 1f;
+        }
         Vector3 moveDir = transform.right * horizontal + transform.forward * vertical;
         if (moveDir.magnitude > 1f) moveDir.Normalize();
 
         bool isGrounded = controller.isGrounded;
         bool isMoving = moveDir.magnitude > 0.1f;
 
+        // ✅ Звук приземления всегда — даже в паузе
         if (!wasGrounded && isGrounded)
             if (landSound != null) audioSource.PlayOneShot(landSound, landVolume);
         wasGrounded = isGrounded;
 
+        // ✅ Сбрасываем вертикальную скорость на земле (фикс падения после паузы)
         if (isGrounded && verticalVelocity.y < 0)
             verticalVelocity.y = -2f;
 
@@ -161,9 +181,9 @@ public class PlayerMovement : MonoBehaviour
                 currentStamina = Mathf.Min(maxStamina, currentStamina + staminaRegen * Time.deltaTime);
         }
 
-        // Прыжок
+        // Прыжок — заблокирован при открытом меню паузы
         if (Input.GetButtonDown("Jump") && isGrounded &&
-            Time.time >= lastJumpTime + jumpCooldown && !uiOpen)
+            Time.time >= lastJumpTime + jumpCooldown && !uiOpen && !PauseMenu.IsPaused)
         {
             verticalVelocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
             lastJumpTime = Time.time;
@@ -218,5 +238,12 @@ public class PlayerMovement : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+    }
+
+    // ✅ Сброс после паузы
+    public void ResetVerticalVelocity()
+    {
+        verticalVelocity = Vector3.zero;
+        wasGrounded = true; // чтобы не сработал звук приземления
     }
 }

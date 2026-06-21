@@ -88,7 +88,7 @@ public class EquipmentUI : MonoBehaviour
         tr.anchorMin = new Vector2(0, 1); tr.anchorMax = new Vector2(1, 1);
         tr.pivot = new Vector2(0.5f, 1); tr.sizeDelta = new Vector2(0, titleH); tr.anchoredPosition = Vector2.zero;
         var tt = titleGO.AddComponent<Text>();
-        tt.text = "СНАРЯЖЕНИЕ  [TAB]"; tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        tt.text = "СНАРЯЖЕНИЕ"; tt.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         tt.fontSize = 18; tt.color = new Color(0.65f, 0.65f, 0.75f); tt.alignment = TextAnchor.MiddleCenter;
 
         var lineGO = new GameObject("Line"); lineGO.transform.SetParent(equipmentPanel.transform, false);
@@ -419,13 +419,8 @@ public class EquipmentUI : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Tab))
-        {
-            IsOpen = !IsOpen;
-            equipmentPanel.SetActive(IsOpen);
-            if (IsOpen) { RefreshEquipmentUI(); PlayerMovement.UnlockCursor(); }
-            else { PlayerMovement.LockCursor(); if (tooltip != null) tooltip.SetActive(false); }
-        }
+        // Escape обрабатывается в PauseMenu (закрывает всё сразу)
+        // Открывается только через меню паузы
         if (tooltip != null && tooltip.activeSelf)
         {
             Vector2 mp = Input.mousePosition; float ox = 15f, oy = -15f;

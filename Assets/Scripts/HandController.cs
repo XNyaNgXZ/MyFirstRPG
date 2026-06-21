@@ -122,18 +122,10 @@ public class HandController : MonoBehaviour
 
     void Update()
     {
-        if (InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
-
-        Item leftSlotItem = inventory?.GetEquippedItem("WeaponLeft");
-        bool hasShield = leftSlotItem != null &&
-                         (leftSlotItem.itemName == "Shield" ||
-                          leftSlotItem.itemType == "Shield" ||
-                          leftSlotItem.originalType == "Shield");
-
-        UpdateAnimatorParams();
-
+        // ✅ Приземление — всегда, даже в паузе
         CharacterController cc = GetComponent<CharacterController>();
         bool grounded = cc != null && cc.isGrounded;
+        UpdateAnimatorParams();
 
         bool justLanded = !wasGroundedLastFrame && grounded;
         if (justLanded)
@@ -150,6 +142,17 @@ public class HandController : MonoBehaviour
         if (landingBlockTimer > 0f) landingBlockTimer -= Time.deltaTime;
         if (landingAttackTimer > 0f) landingAttackTimer -= Time.deltaTime;
         wasGroundedLastFrame = grounded;
+
+        // ✅ Меню паузы и инвентарь блокируют ввод атак (анимация приземления выше — работает всегда)
+        if (PauseMenu.IsOpen || InventoryUICode.IsOpen || EquipmentUI.IsOpen) return;
+        // ✅ Игнорируем атаку сразу после закрытия меню кликом
+        if (Time.time < PauseMenu.LastClosedByClickTime + 0.15f) return;
+
+        Item leftSlotItem = inventory?.GetEquippedItem("WeaponLeft");
+        bool hasShield = leftSlotItem != null &&
+                         (leftSlotItem.itemName == "Shield" ||
+                          leftSlotItem.itemType == "Shield" ||
+                          leftSlotItem.originalType == "Shield");
 
         // ─── Блок ────────────────────────────────────────────────────
         if (hasShield)
@@ -358,27 +361,8 @@ public class HandController : MonoBehaviour
 
     void DestroyHealParticles(bool isRight)
     {
-        if (isRight)
-        {
-            if (healParticlesRight != null)
-            {
-                // ✅ Останавливаем эмиссию но даём частицам доиграть
-                var ps = healParticlesRight.GetComponent<ParticleSystem>();
-                if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                Destroy(healParticlesRight, ps != null ? ps.main.startLifetime.constantMax : 2f);
-                healParticlesRight = null;
-            }
-        }
-        else
-        {
-            if (healParticlesLeft != null)
-            {
-                var ps = healParticlesLeft.GetComponent<ParticleSystem>();
-                if (ps != null) ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                Destroy(healParticlesLeft, ps != null ? ps.main.startLifetime.constantMax : 2f);
-                healParticlesLeft = null;
-            }
-        }
+        if (isRight) { if (healParticlesRight != null) { Destroy(healParticlesRight); healParticlesRight = null; } }
+        else { if (healParticlesLeft != null) { Destroy(healParticlesLeft); healParticlesLeft = null; } }
     }
 
     // ─── Оружие (Lunacid стиль) ───────────────────────────────────────
